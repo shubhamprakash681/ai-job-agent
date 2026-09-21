@@ -44,7 +44,7 @@ async def list_jobs(
     if source:
         query = query.where(Job.source == source)
         count_query = count_query.where(Job.source == source)
-    if status:
+    if status and status != "all":
         query = query.where(Job.status == status)
         count_query = count_query.where(Job.status == status)
     if search:
