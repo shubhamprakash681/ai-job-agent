@@ -1,6 +1,6 @@
 from datetime import datetime
-
-from pydantic import BaseModel
+from typing import Any
+from pydantic import BaseModel, Field
 
 
 class JobScoreResponse(BaseModel):
@@ -16,6 +16,10 @@ class JobScoreResponse(BaseModel):
     llm_score: int | None = None
     fit_category: str | None = None
     recommended_variant: str | None = None
+    strengths: str | None = None
+    gaps: str | None = None
+    risks: str | None = None
+    reasoning: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -64,3 +68,43 @@ class JobFilters(BaseModel):
     min_score: int | None = None
     location: str | None = None
     search: str | None = None
+
+
+class ManualJobCreate(BaseModel):
+    title: str
+    company: str | None = None
+    description: str = ""
+    url: str | None = None
+    location: str | None = None
+    salary: str | None = None
+    experience: str | None = None
+    application_url: str | None = None
+
+
+class ManualJobResponse(BaseModel):
+    job: JobResponse
+    is_new: bool
+    message: str
+
+
+class JobFetchRequest(BaseModel):
+    sources: list[str] | None = None
+    keyword: str = "Java Spring Boot"
+    location: str = "Mumbai"
+    remote: bool = False
+    limit: int = 20
+
+
+class JobFetchResponse(BaseModel):
+    status: str
+    total_fetched: int
+    new_jobs_saved: int
+    duplicates_skipped: int
+    errors: list[str] = Field(default_factory=list)
+
+
+class JobSourceResponse(BaseModel):
+    source: str
+    enabled: bool
+    requires_auth: bool
+    description: str

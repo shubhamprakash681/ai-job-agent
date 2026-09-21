@@ -1,101 +1,206 @@
-from typing import Optional
+from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
-from app.db.session import get_db
-from app.models.user import User
-from app.models.job import Job, JobScore
-from app.schemas.job import JobResponse, JobListResponse
 from app.api.deps import get_current_user
-from app.schemas.common import MessageResponse
+from app.db.session import get_db
+from app.models.job import Job, JobScore
+from app.models.user import User
+from app.schemas.job import (
+    JobFetchRequest,
+    JobFetchResponse,
+    JobListResponse,
+    JobResponse,
+    JobScoreResponse,
+    JobSourceResponse,
+    ManualJobCreate,
+    ManualJobResponse,
+)
+from app.services.ingestion.base import JobSearchQuery
+from app.services.ingestion.pipeline import get_ingestion_pipeline
 
 router = APIRouter()
+
 
 @router.get("", response_model=JobListResponse)
 @router.get("/", response_model=JobListResponse, include_in_schema=False)
 async def list_jobs(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    source: Optional[str] = None,
-    status: Optional[str] = None,
-    min_score: Optional[int] = None,
-    search: Optional[str] = None,
-    location: Optional[str] = None,
+    source: str | None = None,
+    status: str | None = "active",
+    search: str | None = None,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+    db: AsyncSession = Depends(get_db),
+) -> JobListResponse:
+    """List jobs with pagination and optional source, status, and keyword filters."""
     query = select(Job)
-    
+    count_query = select(func.count(Job.id))
+
     if source:
         query = query.where(Job.source == source)
+        count_query = count_query.where(Job.source == source)
     if status:
         query = query.where(Job.status == status)
+        count_query = count_query.where(Job.status == status)
     if search:
-        query = query.where(Job.title.ilike(f"%{search}%"))
-    if location:
-        query = query.where(Job.locations.ilike(f"%{location}%"))
-        
-    # Handling min_score would require joining with JobScore, omitting for brevity in initial implementation unless required
-    
-    total_query = select(func.count()).select_from(query.subquery())
-    total_result = await db.execute(total_query)
-    total = total_result.scalar_one()
-    
-    query = query.offset((page - 1) * per_page).limit(per_page)
+        search_filter = or_(
+            Job.title.ilike(f"%{search}%"),
+            Job.company.ilike(f"%{search}%"),
+            Job.description.ilike(f"%{search}%"),
+            Job.skills.ilike(f"%{search}%"),
+        )
+        query = query.where(search_filter)
+        count_query = count_query.where(search_filter)
+
+    total = await db.scalar(count_query) or 0
+    offset = (page - 1) * per_page
+    query = query.order_by(Job.id.desc()).offset(offset).limit(per_page)
+
     result = await db.execute(query)
-    items = result.scalars().all()
-    
+    jobs = result.scalars().all()
+
     return JobListResponse(
-        items=items,
+        items=[JobResponse.model_validate(j) for j in jobs],
         total=total,
         page=page,
-        per_page=per_page
+        per_page=per_page,
     )
+
+
+@router.post("/manual", response_model=ManualJobResponse)
+async def create_manual_job(
+    job_in: ManualJobCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ManualJobResponse:
+    """
+    Manually ingest a job opportunity by entering its details or pasting its description.
+    Enforces normalization and multi-level deduplication.
+    """
+    pipeline = get_ingestion_pipeline()
+    job, is_new, dup_reason = await pipeline.ingest_manual_job(
+        db=db,
+        title=job_in.title,
+        company=job_in.company,
+        description=job_in.description,
+        url=job_in.url,
+        location=job_in.location,
+        salary=job_in.salary,
+        experience=job_in.experience,
+        application_url=job_in.application_url,
+    )
+
+    msg = "Job created successfully." if is_new else f"Existing job found ({dup_reason})."
+    return ManualJobResponse(
+        job=JobResponse.model_validate(job),
+        is_new=is_new,
+        message=msg,
+    )
+
+
+@router.post("/fetch", response_model=JobFetchResponse)
+async def trigger_fetch_jobs(
+    request: JobFetchRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> JobFetchResponse:
+    """
+    Trigger automated job ingestion across configured source adapters.
+    Deduplicates and stores new opportunities into the jobs table.
+    """
+    pipeline = get_ingestion_pipeline()
+    search_q = JobSearchQuery(
+        keyword=request.keyword,
+        location=request.location,
+        remote=request.remote,
+        limit=request.limit,
+    )
+    res = await pipeline.run_ingestion(db=db, sources=request.sources, query=search_q)
+
+    return JobFetchResponse(
+        status=res["status"],
+        total_fetched=res["total_fetched"],
+        new_jobs_saved=res["new_jobs_saved"],
+        duplicates_skipped=res["duplicates_skipped"],
+        errors=res["errors"],
+    )
+
+
+@router.get("/sources", response_model=list[JobSourceResponse])
+async def list_job_sources(
+    current_user: User = Depends(get_current_user),
+) -> list[JobSourceResponse]:
+    """List available job sources, adapters, and their status."""
+    pipeline = get_ingestion_pipeline()
+    sources = pipeline.list_sources()
+    return [JobSourceResponse(**s) for s in sources]
+
 
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job(
     job_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Job).where(Job.id == job_id))
-    job = result.scalar_one_or_none()
-    
+    db: AsyncSession = Depends(get_db),
+) -> JobResponse:
+    """Retrieve details for a single job."""
+    job = await db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-        
-    return job
+    return JobResponse.model_validate(job)
 
-@router.post("/{job_id}/analyze", response_model=MessageResponse)
+
+@router.get("/{job_id}/score", response_model=JobScoreResponse | None)
+async def get_job_score(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> JobScoreResponse | None:
+    """Get score breakdown for a specific job."""
+    res = await db.execute(select(JobScore).where(JobScore.job_id == job_id))
+    score = res.scalar_one_or_none()
+    if not score:
+        return None
+    return JobScoreResponse.model_validate(score)
+
+
+@router.post("/{job_id}/analyze")
 async def analyze_job(
     job_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    return MessageResponse(message="analysis queued")
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Trigger scoring and match analysis for a job (Phase 5 integration)."""
+    job = await db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {"message": "Job analysis queued", "job_id": job_id}
 
-@router.post("/{job_id}/tailor-resume", response_model=MessageResponse)
+
+@router.post("/{job_id}/tailor-resume")
 async def tailor_resume(
     job_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    return MessageResponse(message="resume tailoring queued")
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Trigger resume tailoring for a job (Phase 6 integration)."""
+    job = await db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {"message": "Resume tailoring queued", "job_id": job_id}
 
-@router.delete("/{job_id}", response_model=MessageResponse)
+
+@router.delete("/{job_id}")
 async def delete_job(
     job_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(Job).where(Job.id == job_id))
-    job = result.scalar_one_or_none()
-    
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Soft delete a job by setting status to 'closed'."""
+    job = await db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-        
     job.status = "closed"
     await db.commit()
-    
-    return MessageResponse(message="Job deleted")
+    return {"message": f"Job {job_id} closed"}

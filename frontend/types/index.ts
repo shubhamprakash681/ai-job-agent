@@ -25,10 +25,41 @@ export interface Job {
   salary_min: number | null;
   salary_max: number | null;
   currency: string;
+  description?: string | null;
+  skills?: string | null;
+  required_skills?: string | null;
+  preferred_skills?: string | null;
   posted_at: string | null;
   status: string;
+  fraud_risk?: string | null;
   application_url: string | null;
   created_at: string;
+}
+
+export interface JobSource {
+  source: string;
+  enabled: boolean;
+  requires_auth: boolean;
+  description: string;
+}
+
+export interface JobFetchResponse {
+  status: string;
+  total_fetched: number;
+  new_jobs_saved: number;
+  duplicates_skipped: number;
+  errors: string[];
+}
+
+export interface ManualJobCreate {
+  title: string;
+  company?: string;
+  description?: string;
+  url?: string;
+  location?: string;
+  salary?: string;
+  experience?: string;
+  application_url?: string;
 }
 
 export interface JobScore {

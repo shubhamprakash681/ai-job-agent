@@ -3,6 +3,9 @@ import {
   TokenResponse,
   Job,
   JobScore,
+  JobSource,
+  JobFetchResponse,
+  ManualJobCreate,
   Application,
   CandidateProfile,
   DashboardSummary,
@@ -69,6 +72,22 @@ class ApiClient {
     return this.request<{ items: Job[]; total: number }>(`/jobs${qs}`);
   }
   getJob(id: number) { return this.request<Job>(`/jobs/${id}`); }
+  getJobScore(id: number) { return this.request<JobScore | null>(`/jobs/${id}/score`); }
+  createManualJob(data: ManualJobCreate) {
+    return this.request<{ job: Job; is_new: boolean; message: string }>('/jobs/manual', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+  fetchJobs(data?: { keyword?: string; location?: string; remote?: boolean; limit?: number; sources?: string[] }) {
+    return this.request<JobFetchResponse>('/jobs/fetch', {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    });
+  }
+  getJobSources() {
+    return this.request<JobSource[]>('/jobs/sources');
+  }
 
   // Applications  
   getApplications(params?: Record<string, string>) {
