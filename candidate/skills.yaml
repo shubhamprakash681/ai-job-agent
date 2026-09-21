@@ -1,0 +1,264 @@
+# Candidate Skills Taxonomy & Evidence Mapping
+categories:
+  - id: "backend"
+    name: "Backend Development"
+    skills:
+      - name: "Java"
+        proficiency: "expert"
+        years_experience: 3.2
+        verified: true
+        evidence_source: "Accenture, TCS Digital, TradeX, CUSAT"
+        primary: true
+      - name: "Spring Boot"
+        proficiency: "expert"
+        years_experience: 3.0
+        verified: true
+        evidence_source: "Accenture, TCS Digital, TradeX"
+        primary: true
+      - name: "Spring MVC"
+        proficiency: "advanced"
+        years_experience: 2.5
+        verified: true
+        evidence_source: "TCS Digital"
+        primary: false
+      - name: "Spring Security"
+        proficiency: "advanced"
+        years_experience: 2.5
+        verified: true
+        evidence_source: "TCS Digital, TradeX"
+        primary: true
+      - name: "Spring Cloud"
+        proficiency: "advanced"
+        years_experience: 2.0
+        verified: true
+        evidence_source: "TCS Digital, TradeX"
+        primary: true
+      - name: "Node.js"
+        proficiency: "intermediate"
+        years_experience: 2.0
+        verified: true
+        evidence_source: "TCS Digital, Sylvr, VideoShare"
+        primary: false
+      - name: "REST APIs"
+        proficiency: "expert"
+        years_experience: 3.0
+        verified: true
+        evidence_source: "Accenture, TCS Digital, Sylvr, TradeX, VideoShare"
+        primary: true
+      - name: "Microservices"
+        proficiency: "advanced"
+        years_experience: 2.5
+        verified: true
+        evidence_source: "Accenture, TCS Digital, TradeX"
+        primary: true
+
+  - id: "distributed_systems"
+    name: "Distributed Systems & Messaging"
+    skills:
+      - name: "Kafka"
+        proficiency: "intermediate"
+        years_experience: 1.5
+        verified: true
+        evidence_source: "TradeX"
+        primary: true
+      - name: "RabbitMQ"
+        proficiency: "intermediate"
+        years_experience: 1.0
+        verified: true
+        evidence_source: "Resume Skills"
+        primary: false
+      - name: "Redis"
+        proficiency: "advanced"
+        years_experience: 2.0
+        verified: true
+        evidence_source: "TradeX, TCS Digital (caching)"
+        primary: true
+      - name: "WebSockets"
+        proficiency: "intermediate"
+        years_experience: 1.5
+        verified: true
+        evidence_source: "TradeX"
+        primary: false
+      - name: "API Gateway"
+        proficiency: "advanced"
+        years_experience: 2.0
+        verified: true
+        evidence_source: "TCS Digital (Spring Cloud Gateway), TradeX"
+        primary: true
+      - name: "Eureka"
+        proficiency: "advanced"
+        years_experience: 2.0
+        verified: true
+        evidence_source: "TCS Digital, TradeX"
+        primary: false
+
+  - id: "databases"
+    name: "Databases & ORM"
+    skills:
+      - name: "PostgreSQL"
+        proficiency: "advanced"
+        years_experience: 2.5
+        verified: true
+        evidence_source: "TradeX, Production systems"
+        primary: true
+      - name: "MongoDB"
+        proficiency: "intermediate"
+        years_experience: 2.0
+        verified: true
+        evidence_source: "Sylvr, VideoShare"
+        primary: false
+      - name: "JPA / Hibernate"
+        proficiency: "advanced"
+        years_experience: 2.5
+        verified: true
+        evidence_source: "TCS Digital, TradeX"
+        primary: true
+      - name: "Prisma"
+        proficiency: "intermediate"
+        years_experience: 1.0
+        verified: true
+        evidence_source: "Resume Skills"
+        primary: false
+      - name: "Mongoose"
+        proficiency: "intermediate"
+        years_experience: 1.5
+        verified: true
+        evidence_source: "Sylvr, VideoShare"
+        primary: false
+
+  - id: "frontend"
+    name: "Frontend Development"
+    skills:
+      - name: "React"
+        proficiency: "advanced"
+        years_experience: 2.5
+        verified: true
+        evidence_source: "TCS Digital, Sylvr, VideoShare"
+        primary: true
+      - name: "Next.js"
+        proficiency: "intermediate"
+        years_experience: 1.5
+        verified: true
+        evidence_source: "Portfolio, Projects"
+        primary: false
+      - name: "TypeScript"
+        proficiency: "advanced"
+        years_experience: 2.5
+        verified: true
+        evidence_source: "TCS Digital, Projects"
+        primary: true
+      - name: "JavaScript"
+        proficiency: "advanced"
+        years_experience: 3.0
+        verified: true
+        evidence_source: "TCS Digital, Sylvr, VideoShare"
+        primary: false
+      - name: "HTML5 / CSS3"
+        proficiency: "advanced"
+        years_experience: 3.0
+        verified: true
+        evidence_source: "TCS Digital, Sylvr, VideoShare"
+        primary: false
+      - name: "Chart.js"
+        proficiency: "intermediate"
+        years_experience: 1.5
+        verified: true
+        evidence_source: "TCS Digital"
+        primary: false
+
+  - id: "devops"
+    name: "DevOps & Cloud"
+    skills:
+      - name: "Docker"
+        proficiency: "advanced"
+        years_experience: 2.0
+        verified: true
+        evidence_source: "Sylvr, VideoShare, TradeX"
+        primary: true
+      - name: "AWS EC2"
+        proficiency: "intermediate"
+        years_experience: 1.5
+        verified: true
+        evidence_source: "VideoShare"
+        primary: true
+      - name: "Nginx"
+        proficiency: "intermediate"
+        years_experience: 1.5
+        verified: true
+        evidence_source: "Sylvr, VideoShare"
+        primary: false
+      - name: "Git / CI/CD"
+        proficiency: "advanced"
+        years_experience: 3.0
+        verified: true
+        evidence_source: "TCS Digital, Accenture, Projects"
+        primary: false
+      - name: "Linux"
+        proficiency: "advanced"
+        years_experience: 3.0
+        verified: true
+        evidence_source: "Sylvr, VideoShare, Daily dev"
+        primary: false
+
+  - id: "security"
+    name: "Security & Auth"
+    skills:
+      - name: "JWT"
+        proficiency: "advanced"
+        years_experience: 2.5
+        verified: true
+        evidence_source: "TCS Digital, TradeX, VideoShare"
+        primary: true
+      - name: "OAuth2"
+        proficiency: "advanced"
+        years_experience: 2.0
+        verified: true
+        evidence_source: "TCS Digital"
+        primary: true
+      - name: "Auth0 SSO"
+        proficiency: "intermediate"
+        years_experience: 1.5
+        verified: true
+        evidence_source: "TCS Digital"
+        primary: false
+      - name: "RBAC"
+        proficiency: "advanced"
+        years_experience: 2.0
+        verified: true
+        evidence_source: "Sylvr, TCS Digital"
+        primary: false
+
+  - id: "core_engineering"
+    name: "Core Engineering Fundamentals"
+    skills:
+      - name: "System Design"
+        proficiency: "advanced"
+        years_experience: 2.5
+        verified: true
+        evidence_source: "TCS Digital, TradeX"
+        primary: true
+      - name: "High-Level Design (HLD)"
+        proficiency: "advanced"
+        years_experience: 2.0
+        verified: true
+        evidence_source: "TCS Digital, TradeX"
+        primary: true
+      - name: "Low-Level Design (LLD)"
+        proficiency: "advanced"
+        years_experience: 2.5
+        verified: true
+        evidence_source: "TCS Digital, TradeX"
+        primary: true
+      - name: "Data Structures & Algorithms (DSA)"
+        proficiency: "advanced"
+        years_experience: 3.0
+        verified: true
+        evidence_source: "CUSAT, Professional work"
+        primary: true
+      - name: "Object-Oriented Programming (OOP)"
+        proficiency: "expert"
+        years_experience: 3.2
+        verified: true
+        evidence_source: "Java enterprise development"
+        primary: true
+

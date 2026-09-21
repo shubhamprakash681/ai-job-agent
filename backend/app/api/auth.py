@@ -39,6 +39,14 @@ async def setup(request: SetupRequest, db: AsyncSession = Depends(get_db)):
     await db.refresh(user)
     
     access_token = create_access_token(subject=str(user.id))
+
+    # Auto-seed candidate knowledge base from YAML files
+    try:
+        from app.services.candidate.kb_seeder import seed_candidate_kb
+        await seed_candidate_kb(db, user_id=user.id)
+    except Exception:
+        pass
+
     return TokenResponse(access_token=access_token, user=user)
 
 @router.post("/login", response_model=TokenResponse)

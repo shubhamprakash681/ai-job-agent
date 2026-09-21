@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
     LOG_LEVEL: str = "INFO"
+    CANDIDATE_DATA_DIR: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env", 

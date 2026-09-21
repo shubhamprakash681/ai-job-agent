@@ -7,7 +7,11 @@ import {
   CandidateProfile,
   DashboardSummary,
   SetupStatus,
-  ResumeVariant
+  ResumeVariant,
+  CandidateFact,
+  SkillCategory,
+  ClaimValidationResponse,
+  ResumeValidationResponse,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -73,8 +77,24 @@ class ApiClient {
   }
 
   // Candidate
-  getCandidate() { return this.request<CandidateProfile>('/candidate'); }
-  updateCandidate(data: Partial<CandidateProfile>) { return this.request<CandidateProfile>('/candidate', { method: 'PUT', body: JSON.stringify(data) }); }
+  getCandidate() { return this.request<CandidateProfile>('/candidate/'); }
+  updateCandidate(data: Partial<CandidateProfile>) { return this.request<CandidateProfile>('/candidate/', { method: 'PUT', body: JSON.stringify(data) }); }
+  getCandidateFacts(category?: string) {
+    const qs = category ? `?category=${encodeURIComponent(category)}` : '';
+    return this.request<CandidateFact[]>(`/candidate/facts${qs}`);
+  }
+  getCandidateSkills() {
+    return this.request<{ categories: SkillCategory[]; total_skills: number }>('/candidate/skills');
+  }
+  syncCandidateKB() {
+    return this.request<{ status: string; message: string; facts_count: number; candidate_name: string }>('/candidate/sync', { method: 'POST' });
+  }
+  validateClaim(claim: string) {
+    return this.request<ClaimValidationResponse>('/candidate/validate-claim', { method: 'POST', body: JSON.stringify({ claim }) });
+  }
+  validateResumeText(content: string) {
+    return this.request<ResumeValidationResponse>('/candidate/validate-resume', { method: 'POST', body: JSON.stringify({ content }) });
+  }
 
   // Resumes
   getResumeVariants() { return this.request<ResumeVariant[]>('/resumes/variants'); }

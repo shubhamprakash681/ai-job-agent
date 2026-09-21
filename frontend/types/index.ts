@@ -60,11 +60,84 @@ export interface CandidateProfile {
   phone: string | null;
   location: string | null;
   portfolio_url: string | null;
+  github_url?: string | null;
+  linkedin_url?: string | null;
   current_company: string | null;
   current_role: string | null;
   total_experience_months: number | null;
+  notice_period_days?: number | null;
+  current_ctc?: string | null;
+  expected_ctc?: string | null;
   preferred_locations: string | null;
+  remote_preference?: string | null;
   target_roles: string | null;
+  profile_data?: string | null;
+}
+
+export interface CandidateFact {
+  id: number;
+  fact_id: string;
+  claim: string;
+  category: string;
+  source: string;
+  verified: boolean;
+  allowed_for_resume: boolean;
+  allowed_for_application: boolean;
+  metadata_json?: string | null;
+}
+
+export interface SkillItem {
+  name: string;
+  proficiency: string;
+  years_experience: number;
+  verified: boolean;
+  evidence_source: string;
+  primary: boolean;
+}
+
+export interface SkillCategory {
+  id: string;
+  name: string;
+  skills: SkillItem[];
+}
+
+export interface ClaimValidationResponse {
+  is_supported: boolean;
+  confidence: number;
+  claim: string;
+  conflicts: string[];
+  reasoning: string;
+  supporting_evidence: Array<{
+    fact_id: string;
+    category: string;
+    claim: string;
+    source_reference: string;
+    confidence: number;
+  }>;
+}
+
+export interface ResumeValidationResponse {
+  passed: boolean;
+  confidence_score: number;
+  supported_claims_count: number;
+  unsupported_claims_count: number;
+  supported_claims: Array<{
+    claim: string;
+    confidence: number;
+    primary_fact_id?: string;
+    source?: string;
+  }>;
+  unsupported_claims: string[];
+  hallucinated_skills: string[];
+  verified_skills: string[];
+  metric_discrepancies: Array<{
+    metric: string;
+    claimed_value: number;
+    verified_value: number;
+    issue: string;
+  }>;
+  warnings: string[];
+  errors: string[];
 }
 
 export interface DashboardSummary {
