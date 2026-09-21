@@ -21,6 +21,8 @@ import {
   AlertTriangle,
   Award,
   Zap,
+  SlidersHorizontal,
+  ChevronRight,
 } from 'lucide-react';
 
 export default function JobsPage() {
@@ -33,6 +35,7 @@ export default function JobsPage() {
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
+  const [minScoreFilter, setMinScoreFilter] = useState('');
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -55,12 +58,13 @@ export default function JobsPage() {
   const [fetchingJobs, setFetchingJobs] = useState(false);
   const [processingBatch, setProcessingBatch] = useState(false);
   const [classifyingId, setClassifyingId] = useState<number | null>(null);
+  const [analyzingId, setAnalyzingId] = useState<number | null>(null);
   const [alertMessage, setAlertMessage] = useState<{ type: 'info' | 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     loadSources();
     fetchJobsList();
-  }, [sourceFilter, statusFilter]);
+  }, [sourceFilter, statusFilter, minScoreFilter]);
 
   const loadSources = async () => {
     try {
@@ -77,6 +81,7 @@ export default function JobsPage() {
       const params: Record<string, string> = {};
       if (sourceFilter) params.source = sourceFilter;
       if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
+      if (minScoreFilter) params.min_score = minScoreFilter;
       if (search.trim()) params.search = search.trim();
 
       const res = await api.getJobs(params);
@@ -152,7 +157,6 @@ export default function JobsPage() {
     setClassifyingId(jobId);
     try {
       const res = await api.classifyJob(jobId);
-      // Update jobs list state
       setJobs((prev) =>
         prev.map((j) => (j.id === jobId ? { ...j, status: res.job.status, score: res.score } : j))
       );
@@ -170,6 +174,28 @@ export default function JobsPage() {
     }
   };
 
+  const handleAnalyzeJob = async (jobId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setAnalyzingId(jobId);
+    try {
+      const updatedScore = await api.analyzeJob(jobId);
+      setJobs((prev) =>
+        prev.map((j) => (j.id === jobId ? { ...j, score: updatedScore } : j))
+      );
+      if (selectedJob && selectedJob.id === jobId) {
+        setSelectedJob({ ...selectedJob, score: updatedScore });
+      }
+      setAlertMessage({
+        type: 'success',
+        text: `Multi-dimensional analysis complete: Match score ${updatedScore.total_score}/100 (${updatedScore.fit_category}).`,
+      });
+    } catch (err: any) {
+      setAlertMessage({ type: 'error', text: `Analysis failed: ${err.message || 'Error'}` });
+    } finally {
+      setAnalyzingId(null);
+    }
+  };
+
   const handleProcessPending = async () => {
     setProcessingBatch(true);
     setAlertMessage(null);
@@ -177,7 +203,7 @@ export default function JobsPage() {
       const res = await api.processPendingJobs(50);
       setAlertMessage({
         type: 'success',
-        text: `Processing complete: ${res.total_processed} jobs evaluated (${res.passed} passed prefilters, ${res.rejected} rejected).`,
+        text: `Processing complete: ${res.total_processed} jobs evaluated (${res.passed} passed, ${res.rejected} rejected).`,
       });
       await fetchJobsList();
     } catch (err: any) {
@@ -218,31 +244,39 @@ export default function JobsPage() {
       );
     }
     const cat = score.fit_category.toUpperCase();
-    if (cat === 'HIGH_FIT') {
+    if (cat === 'AUTO_PREPARE' || (score.total_score >= 85 && cat === 'HIGH_FIT')) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
           <Sparkles className="w-3 h-3 mr-1 text-emerald-600" />
-          High Fit ({score.total_score}%)
+          Auto-Prepare ({score.total_score}%)
         </span>
       );
     }
-    if (cat === 'MODERATE_FIT') {
+    if (cat === 'HIGH_PRIORITY' || (score.total_score >= 70 && cat === 'HIGH_FIT')) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">
+          <Award className="w-3 h-3 mr-1 text-indigo-600" />
+          High Priority ({score.total_score}%)
+        </span>
+      );
+    }
+    if (cat === 'GOOD' || cat === 'MODERATE_FIT') {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-          Moderate ({score.total_score}%)
+          Good Fit ({score.total_score}%)
         </span>
       );
     }
-    if (cat === 'LOW_FIT') {
+    if (cat === 'OPTIONAL' || cat === 'LOW_FIT') {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-          Low Fit ({score.total_score}%)
+          Optional ({score.total_score}%)
         </span>
       );
     }
     return (
       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
-        Rejected ({score.total_score}%)
+        Ignore ({score.total_score}%)
       </span>
     );
   };
@@ -269,7 +303,7 @@ export default function JobsPage() {
               title="Run prefilters and AI classification on unclassified jobs"
             >
               <Zap className={`w-4 h-4 mr-1.5 ${processingBatch ? 'animate-spin' : 'text-indigo-600'}`} />
-              {processingBatch ? 'Classifying...' : 'Classify Unprocessed'}
+              {processingBatch ? 'Processing...' : 'Process Unclassified'}
             </button>
 
             <button
@@ -328,7 +362,7 @@ export default function JobsPage() {
           </span>
         </div>
 
-        {/* Search and Filters Bar */}
+        {/* Search and Multi-Dimensional Filters Bar */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
@@ -342,7 +376,20 @@ export default function JobsPage() {
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={minScoreFilter}
+                onChange={(e) => setMinScoreFilter(e.target.value)}
+                aria-label="Filter by Match Score"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Any Match Score</option>
+                <option value="85">85%+ (Auto-Prepare)</option>
+                <option value="70">70%+ (High Priority)</option>
+                <option value="50">50%+ (Good Fit)</option>
+                <option value="30">30%+ (Viable)</option>
+              </select>
+
               <select
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value)}
@@ -390,9 +437,9 @@ export default function JobsPage() {
           ) : jobs.length === 0 ? (
             <div className="p-12 text-center text-gray-500 space-y-3">
               <Briefcase className="w-12 h-12 text-gray-300 mx-auto stroke-1" />
-              <h4 className="text-base font-medium text-gray-800">No jobs discovered yet</h4>
+              <h4 className="text-base font-medium text-gray-800">No jobs found</h4>
               <p className="text-sm text-gray-500 max-w-md mx-auto">
-                Use &quot;Add Job Manually&quot; to paste an opportunity, or click &quot;Discover Jobs&quot; to run the source adapters.
+                Try adjusting your filters or click &quot;Discover Jobs&quot; to fetch fresh opportunities.
               </p>
             </div>
           ) : (
@@ -643,7 +690,7 @@ export default function JobsPage() {
           </div>
         )}
 
-        {/* Modal: Job Details & AI Classification Breakdown */}
+        {/* Modal: Job Details & Multi-Dimensional Scoring Breakdown */}
         {selectedJob && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 space-y-4 max-h-[88vh] overflow-y-auto">
@@ -657,27 +704,119 @@ export default function JobsPage() {
                 </button>
               </div>
 
-              {/* AI Classification & Match Breakdown Card */}
+              {/* Multi-Dimensional Match Breakdown Card */}
               {selectedJob.score ? (
                 <div className="bg-gradient-to-br from-slate-50 to-indigo-50/40 border border-indigo-100 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <Sparkles className="w-5 h-5 text-indigo-600" />
-                      <span className="font-bold text-sm text-indigo-950">AI Fit Analysis</span>
+                      <span className="font-bold text-sm text-indigo-950">100-Point Candidate Fit Analysis</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       {renderFitBadge(selectedJob.score)}
                       <button
-                        onClick={() => handleClassifyJob(selectedJob.id)}
-                        disabled={classifyingId === selectedJob.id}
-                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium underline"
+                        onClick={() => handleAnalyzeJob(selectedJob.id)}
+                        disabled={analyzingId === selectedJob.id}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium underline disabled:opacity-50"
                       >
-                        {classifyingId === selectedJob.id ? 'Re-evaluating...' : 'Re-classify'}
+                        {analyzingId === selectedJob.id ? 'Analyzing...' : 'Deep Re-Score'}
                       </button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-white p-3 rounded-lg border border-slate-200">
+                  {/* 6-Dimension Progress Breakdown */}
+                  <div className="bg-white p-3.5 rounded-lg border border-slate-200 space-y-2.5 text-xs">
+                    <div className="font-semibold text-slate-700 flex justify-between items-center">
+                      <span>Multi-Dimensional Score Breakdown</span>
+                      <span className="text-indigo-600 font-bold text-sm">{selectedJob.score.total_score} / 100 pts</span>
+                    </div>
+
+                    {/* Dim 1: Role Relevance (25) */}
+                    <div>
+                      <div className="flex justify-between text-[11px] text-gray-600 mb-1">
+                        <span>1. Role Relevance (Java / Fullstack)</span>
+                        <span className="font-semibold text-gray-900">{selectedJob.score.role_relevance} / 25 pts</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          style={{ width: `${(selectedJob.score.role_relevance / 25) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Dim 2: Core Skills (25) */}
+                    <div>
+                      <div className="flex justify-between text-[11px] text-gray-600 mb-1">
+                        <span>2. Core Tech Stack (Java, Spring Boot, React, SQL)</span>
+                        <span className="font-semibold text-gray-900">{selectedJob.score.core_skills} / 25 pts</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-emerald-600 h-2 rounded-full transition-all"
+                          style={{ width: `${(selectedJob.score.core_skills / 25) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Dim 3: Distributed Systems (15) */}
+                    <div>
+                      <div className="flex justify-between text-[11px] text-gray-600 mb-1">
+                        <span>3. Distributed Systems & Scale (Kafka, Redis, WebSockets)</span>
+                        <span className="font-semibold text-gray-900">{selectedJob.score.distributed_systems} / 15 pts</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-purple-600 h-2 rounded-full transition-all"
+                          style={{ width: `${(selectedJob.score.distributed_systems / 15) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Dim 4: Experience Fit (15) */}
+                    <div>
+                      <div className="flex justify-between text-[11px] text-gray-600 mb-1">
+                        <span>4. Experience Level (~3.2 yrs candidate profile)</span>
+                        <span className="font-semibold text-gray-900">{selectedJob.score.experience_fit} / 15 pts</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-amber-500 h-2 rounded-full transition-all"
+                          style={{ width: `${(selectedJob.score.experience_fit / 15) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Dim 5: Location Fit (10) */}
+                    <div>
+                      <div className="flex justify-between text-[11px] text-gray-600 mb-1">
+                        <span>5. Location & Remote Work Mode</span>
+                        <span className="font-semibold text-gray-900">{selectedJob.score.location_score} / 10 pts</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-teal-600 h-2 rounded-full transition-all"
+                          style={{ width: `${(selectedJob.score.location_score / 10) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Dim 6: Quality & Recency (10) */}
+                    <div>
+                      <div className="flex justify-between text-[11px] text-gray-600 mb-1">
+                        <span>6. Job Quality & Recency (ATS Board, Salary, Clear JD)</span>
+                        <span className="font-semibold text-gray-900">{selectedJob.score.job_quality} / 10 pts</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-indigo-600 h-2 rounded-full transition-all"
+                          style={{ width: `${(selectedJob.score.job_quality / 10) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs bg-white p-3 rounded-lg border border-slate-200">
                     <div>
                       <span className="text-gray-500 block">Recommended Variant:</span>
                       <span className="font-semibold text-gray-900 font-mono">
@@ -685,15 +824,9 @@ export default function JobsPage() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500 block">Match Score:</span>
-                      <span className="font-bold text-gray-900 text-sm">
-                        {selectedJob.score.total_score} / 100
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block">Role Relevance:</span>
-                      <span className="font-semibold text-gray-900">
-                        {selectedJob.score.role_relevance} / 25
+                      <span className="text-gray-500 block">Fit Category:</span>
+                      <span className="font-bold text-gray-900">
+                        {selectedJob.score.fit_category || 'EVALUATED'}
                       </span>
                     </div>
                   </div>
@@ -701,7 +834,7 @@ export default function JobsPage() {
                   {/* Reasoning */}
                   {selectedJob.score.reasoning && (
                     <div className="text-xs bg-white p-3 rounded-lg border border-slate-200">
-                      <span className="font-semibold text-slate-700 block mb-1">Fit Assessment Rationale:</span>
+                      <span className="font-semibold text-slate-700 block mb-1">Score Breakdown Rationale:</span>
                       <p className="text-slate-600 italic">&ldquo;{selectedJob.score.reasoning}&rdquo;</p>
                     </div>
                   )}
@@ -710,7 +843,7 @@ export default function JobsPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     {selectedJob.score.strengths && (
                       <div className="bg-emerald-50/80 border border-emerald-200 p-2.5 rounded-lg">
-                        <span className="font-semibold text-emerald-900 block mb-1">Matched Skills:</span>
+                        <span className="font-semibold text-emerald-900 block mb-1">Matched Strengths:</span>
                         <div className="flex flex-wrap gap-1">
                           {parseJsonArray(selectedJob.score.strengths).map((s) => (
                             <span key={s} className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-medium">
@@ -723,7 +856,7 @@ export default function JobsPage() {
 
                     {selectedJob.score.gaps && (
                       <div className="bg-amber-50/80 border border-amber-200 p-2.5 rounded-lg">
-                        <span className="font-semibold text-amber-900 block mb-1">Missing / Gap Skills:</span>
+                        <span className="font-semibold text-amber-900 block mb-1">Skill Gaps:</span>
                         <div className="flex flex-wrap gap-1">
                           {parseJsonArray(selectedJob.score.gaps).map((s) => (
                             <span key={s} className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[11px] font-medium">
@@ -753,19 +886,19 @@ export default function JobsPage() {
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div>
                     <h4 className="text-sm font-bold text-gray-800 flex items-center">
-                      <Sparkles className="w-4 h-4 mr-1.5 text-indigo-600" /> AI Classification Pending
+                      <Sparkles className="w-4 h-4 mr-1.5 text-indigo-600" /> Scoring Analysis Pending
                     </h4>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Evaluate this opportunity against Shubham&apos;s verified skills and experience.
+                      Evaluate this opportunity across the 6-dimension scoring rubric.
                     </p>
                   </div>
                   <button
-                    onClick={() => handleClassifyJob(selectedJob.id)}
-                    disabled={classifyingId === selectedJob.id}
+                    onClick={() => handleAnalyzeJob(selectedJob.id)}
+                    disabled={analyzingId === selectedJob.id}
                     className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center shrink-0 disabled:opacity-50"
                   >
-                    <Zap className={`w-3.5 h-3.5 mr-1.5 ${classifyingId === selectedJob.id ? 'animate-spin' : ''}`} />
-                    {classifyingId === selectedJob.id ? 'Classifying...' : 'Classify Fit Now'}
+                    <Zap className={`w-3.5 h-3.5 mr-1.5 ${analyzingId === selectedJob.id ? 'animate-spin' : ''}`} />
+                    {analyzingId === selectedJob.id ? 'Analyzing...' : 'Analyze Match Score'}
                   </button>
                 </div>
               )}

@@ -11,6 +11,7 @@ from app.services.processing.classifier import (
     get_job_classifier,
 )
 from app.services.processing.prefilter import run_prefilters
+from app.services.scoring.scorer import get_job_scorer
 
 logger = structlog.get_logger(__name__)
 
@@ -105,53 +106,59 @@ class JobProcessor:
         # 2. Run Classification
         classification = await self.classifier.classify(job, db=db)
 
-        # Calculate breakdown scores
-        role_rel = 25 if classification.role_category != "UNRELATED" else 5
-        core_sk = min(25, max(10, len(classification.matched_skills) * 5))
-        dist_sys = 20 if classification.role_category == "DISTRIBUTED_SYSTEMS" else 10
-        exp_fit = 15 if classification.experience_fit in ["EXCELLENT", "ACCEPTABLE"] else 5
-        loc_sc = 10 if not prefilter_res.warnings else 5
-        job_qual = 10
+        # 3. Run Multi-Dimensional Scoring Engine (Phase 5)
+        scorer = get_job_scorer()
+        scoring = scorer.score_job(
+            job=job,
+            role_category=classification.role_category,
+            llm_score=classification.fit_score,
+        )
 
-        all_risks = classification.red_flags + prefilter_res.warnings
+        all_risks = list(dict.fromkeys(scoring.risks + classification.red_flags + prefilter_res.warnings))
+        all_strengths = list(dict.fromkeys(scoring.strengths + classification.matched_skills))
+        all_gaps = list(dict.fromkeys(scoring.gaps + classification.missing_skills))
+
+        full_reasoning = scoring.reasoning
+        if classification.reasoning and classification.reasoning not in full_reasoning:
+            full_reasoning = f"{full_reasoning} AI Notes: {classification.reasoning}"
 
         if not score:
             score = JobScore(
                 job_id=job.id,
-                total_score=classification.fit_score,
-                role_relevance=role_rel,
-                core_skills=core_sk,
-                distributed_systems=dist_sys,
-                experience_fit=exp_fit,
-                location_score=loc_sc,
-                job_quality=job_qual,
+                total_score=scoring.total_score,
+                role_relevance=scoring.role_relevance,
+                core_skills=scoring.core_skills,
+                distributed_systems=scoring.distributed_systems,
+                experience_fit=scoring.experience_fit,
+                location_score=scoring.location_score,
+                job_quality=scoring.job_quality,
                 llm_score=classification.fit_score,
-                fit_category=classification.fit_category,
-                recommended_variant=classification.recommended_variant,
-                strengths=json.dumps(classification.matched_skills),
-                gaps=json.dumps(classification.missing_skills),
+                fit_category=scoring.fit_category,
+                recommended_variant=scoring.recommended_variant,
+                strengths=json.dumps(all_strengths),
+                gaps=json.dumps(all_gaps),
                 risks=json.dumps(all_risks),
-                reasoning=classification.reasoning,
+                reasoning=full_reasoning,
             )
             db.add(score)
         else:
-            score.total_score = classification.fit_score
-            score.role_relevance = role_rel
-            score.core_skills = core_sk
-            score.distributed_systems = dist_sys
-            score.experience_fit = exp_fit
-            score.location_score = loc_sc
-            score.job_quality = job_qual
+            score.total_score = scoring.total_score
+            score.role_relevance = scoring.role_relevance
+            score.core_skills = scoring.core_skills
+            score.distributed_systems = scoring.distributed_systems
+            score.experience_fit = scoring.experience_fit
+            score.location_score = scoring.location_score
+            score.job_quality = scoring.job_quality
             score.llm_score = classification.fit_score
-            score.fit_category = classification.fit_category
-            score.recommended_variant = classification.recommended_variant
-            score.strengths = json.dumps(classification.matched_skills)
-            score.gaps = json.dumps(classification.missing_skills)
+            score.fit_category = scoring.fit_category
+            score.recommended_variant = scoring.recommended_variant
+            score.strengths = json.dumps(all_strengths)
+            score.gaps = json.dumps(all_gaps)
             score.risks = json.dumps(all_risks)
-            score.reasoning = classification.reasoning
+            score.reasoning = full_reasoning
 
-        # Update job status if classified as REJECT
-        if classification.fit_category == "REJECT":
+        # Update job status if score indicates IGNORE
+        if scoring.fit_category == "IGNORE":
             job.status = "rejected_fit"
         else:
             job.status = "active"

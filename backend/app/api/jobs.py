@@ -22,6 +22,7 @@ from app.schemas.job import (
 from app.services.ingestion.base import JobSearchQuery
 from app.services.ingestion.pipeline import get_ingestion_pipeline
 from app.services.processing.processor import get_job_processor
+from app.services.scoring.scorer import get_job_scorer
 
 router = APIRouter()
 
@@ -33,6 +34,7 @@ async def list_jobs(
     per_page: int = Query(20, ge=1, le=100),
     source: str | None = None,
     status: str | None = "active",
+    min_score: int | None = Query(None, ge=0, le=100),
     search: str | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -40,6 +42,10 @@ async def list_jobs(
     """List jobs with pagination and optional source, status, and keyword filters."""
     query = select(Job)
     count_query = select(func.count(Job.id))
+
+    if min_score is not None:
+        query = query.join(JobScore, Job.id == JobScore.job_id).where(JobScore.total_score >= min_score)
+        count_query = count_query.join(JobScore, Job.id == JobScore.job_id).where(JobScore.total_score >= min_score)
 
     if source:
         query = query.where(Job.source == source)
@@ -234,17 +240,63 @@ async def classify_job_endpoint(
     )
 
 
-@router.post("/{job_id}/analyze")
+@router.post("/{job_id}/analyze", response_model=JobScoreResponse)
 async def analyze_job(
     job_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, Any]:
-    """Trigger scoring and match analysis for a job (Phase 5 integration)."""
+) -> JobScoreResponse:
+    """
+    Perform deep multi-dimensional match analysis for a job (Phase 5).
+    Evaluates role relevance, core skills, distributed systems, experience, location, and quality.
+    Updates and persists JobScore record.
+    """
+    import json
     job = await db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return {"message": "Job analysis queued", "job_id": job_id}
+
+    scorer = get_job_scorer()
+    scoring = scorer.score_job(job)
+
+    res = await db.execute(select(JobScore).where(JobScore.job_id == job_id))
+    score = res.scalar_one_or_none()
+    if not score:
+        score = JobScore(
+            job_id=job_id,
+            total_score=scoring.total_score,
+            role_relevance=scoring.role_relevance,
+            core_skills=scoring.core_skills,
+            distributed_systems=scoring.distributed_systems,
+            experience_fit=scoring.experience_fit,
+            location_score=scoring.location_score,
+            job_quality=scoring.job_quality,
+            fit_category=scoring.fit_category,
+            recommended_variant=scoring.recommended_variant,
+            strengths=json.dumps(scoring.strengths),
+            gaps=json.dumps(scoring.gaps),
+            risks=json.dumps(scoring.risks),
+            reasoning=scoring.reasoning,
+        )
+        db.add(score)
+    else:
+        score.total_score = scoring.total_score
+        score.role_relevance = scoring.role_relevance
+        score.core_skills = scoring.core_skills
+        score.distributed_systems = scoring.distributed_systems
+        score.experience_fit = scoring.experience_fit
+        score.location_score = scoring.location_score
+        score.job_quality = scoring.job_quality
+        score.fit_category = scoring.fit_category
+        score.recommended_variant = scoring.recommended_variant
+        score.strengths = json.dumps(scoring.strengths)
+        score.gaps = json.dumps(scoring.gaps)
+        score.risks = json.dumps(scoring.risks)
+        score.reasoning = scoring.reasoning
+
+    await db.commit()
+    await db.refresh(score)
+    return JobScoreResponse.model_validate(score)
 
 
 @router.post("/{job_id}/tailor-resume")

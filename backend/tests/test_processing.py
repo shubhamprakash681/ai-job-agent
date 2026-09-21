@@ -148,7 +148,7 @@ async def test_processor_pipeline_and_audit(db_session):
 
     assert job_processed.id == job.id
     assert score is not None
-    assert score.fit_category in ["HIGH_FIT", "MODERATE_FIT"]
+    assert score.fit_category in ["AUTO_PREPARE", "HIGH_PRIORITY", "GOOD", "HIGH_FIT", "MODERATE_FIT"]
     assert score.total_score > 50
     assert summary["status"] == "classified"
 
@@ -206,7 +206,7 @@ async def test_api_classify_endpoint(client, auth_headers, db_session):
     data = resp.json()
 
     assert data["job"]["id"] == job.id
-    assert data["score"]["fit_category"] in ["HIGH_FIT", "MODERATE_FIT"]
+    assert data["score"]["fit_category"] in ["AUTO_PREPARE", "HIGH_PRIORITY", "GOOD", "HIGH_FIT", "MODERATE_FIT"]
     assert "processing_summary" in data
 
     # Verify GET /jobs now includes score

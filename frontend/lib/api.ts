@@ -98,6 +98,11 @@ class ApiClient {
       method: 'POST',
     });
   }
+  analyzeJob(id: number) {
+    return this.request<JobScore>(`/jobs/${id}/analyze`, {
+      method: 'POST',
+    });
+  }
 
   // Applications  
   getApplications(params?: Record<string, string>) {
