@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: jobagent
+      POSTGRES_PASSWORD: jobagent_dev
+      POSTGRES_DB: jobagent
+    ports:
+      - '5431:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U jobagent']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - '8000:8000'
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://jobagent:jobagent_dev@postgres:5432/jobagent
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-a-long-random-string}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DRY_RUN=${DRY_RUN:-true}
+      - HUMAN_APPROVAL_REQUIRED=${HUMAN_APPROVAL_REQUIRED:-true}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_ENABLED=${GEMINI_ENABLED:-false}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_ENABLED=${GROQ_ENABLED:-false}
+      - CORS_ORIGINS=["http://localhost:3000"]
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./candidate:/app/candidate:ro
+      - ./prompts:/app/prompts:ro
+      - ./documents:/app/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
