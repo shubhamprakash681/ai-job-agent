@@ -12,7 +12,8 @@ from app.schemas.common import MessageResponse
 
 router = APIRouter()
 
-@router.get("/", response_model=ApplicationListResponse)
+@router.get("", response_model=ApplicationListResponse)
+@router.get("/", response_model=ApplicationListResponse, include_in_schema=False)
 async def list_applications(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),

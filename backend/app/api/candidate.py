@@ -26,7 +26,8 @@ from app.services.candidate.kb_seeder import seed_candidate_kb
 router = APIRouter()
 
 
-@router.get("/", response_model=CandidateProfileResponse)
+@router.get("", response_model=CandidateProfileResponse)
+@router.get("/", response_model=CandidateProfileResponse, include_in_schema=False)
 async def get_profile(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -69,7 +70,8 @@ async def get_profile(
     return profile  # type: ignore[return-value]
 
 
-@router.put("/", response_model=CandidateProfileResponse)
+@router.put("", response_model=CandidateProfileResponse)
+@router.put("/", response_model=CandidateProfileResponse, include_in_schema=False)
 async def update_profile(
     update_data: CandidateProfileUpdate,
     current_user: User = Depends(get_current_user),
