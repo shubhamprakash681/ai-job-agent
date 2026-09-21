@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { api } from '@/lib/api';
-import { Job, JobScore, JobSource, ManualJobCreate } from '@/types';
+import { Job, JobScore, JobSource, ManualJobCreate, CoverLetterResponse } from '@/types';
 import {
   Briefcase,
   Plus,
@@ -24,6 +24,11 @@ import {
   SlidersHorizontal,
   ChevronRight,
   FileCheck,
+  FileText,
+  Download,
+  Copy,
+  Check,
+  Edit3,
 } from 'lucide-react';
 
 export default function JobsPage() {
@@ -41,6 +46,18 @@ export default function JobsPage() {
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+
+  // Cover Letter Studio State
+  const [coverLetterModalOpen, setCoverLetterModalOpen] = useState(false);
+  const [coverLetterJob, setCoverLetterJob] = useState<Job | null>(null);
+  const [coverLetterData, setCoverLetterData] = useState<CoverLetterResponse | null>(null);
+  const [coverLetterTone, setCoverLetterTone] = useState<string>('technical');
+  const [coverLetterDraft, setCoverLetterDraft] = useState<string>('');
+  const [coverLetterLoading, setCoverLetterLoading] = useState(false);
+  const [coverLetterSaving, setCoverLetterSaving] = useState(false);
+  const [coverLetterCopied, setCoverLetterCopied] = useState(false);
+  const [coverLetterTab, setCoverLetterTab] = useState<'editor' | 'preview'>('editor');
+  const [coverLetterMessage, setCoverLetterMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Manual Job Form
   const [manualForm, setManualForm] = useState<ManualJobCreate>({
@@ -211,6 +228,69 @@ export default function JobsPage() {
     } finally {
       setTailoringId(null);
     }
+  };
+
+  const handleOpenCoverLetter = async (job: Job) => {
+    setCoverLetterJob(job);
+    setCoverLetterModalOpen(true);
+    setCoverLetterLoading(true);
+    setCoverLetterMessage(null);
+    setCoverLetterTone('technical');
+    try {
+      const res = await api.getCoverLetter(job.id);
+      setCoverLetterData(res);
+      setCoverLetterDraft(res.content_markdown);
+    } catch (err: any) {
+      try {
+        const genRes = await api.generateCoverLetter(job.id, 'technical');
+        setCoverLetterData(genRes);
+        setCoverLetterDraft(genRes.content_markdown);
+      } catch (genErr: any) {
+        setCoverLetterMessage({ type: 'error', text: genErr.message || 'Failed to load cover letter' });
+      }
+    } finally {
+      setCoverLetterLoading(false);
+    }
+  };
+
+  const handleRegenerateCoverLetter = async (tone?: string) => {
+    if (!coverLetterJob) return;
+    const targetTone = tone || coverLetterTone;
+    setCoverLetterLoading(true);
+    setCoverLetterMessage(null);
+    try {
+      const res = await api.generateCoverLetter(coverLetterJob.id, targetTone);
+      setCoverLetterData(res);
+      setCoverLetterDraft(res.content_markdown);
+      setCoverLetterTone(targetTone);
+      setCoverLetterMessage({ type: 'success', text: `Cover letter regenerated with ${targetTone} tone!` });
+    } catch (err: any) {
+      setCoverLetterMessage({ type: 'error', text: err.message || 'Failed to generate cover letter' });
+    } finally {
+      setCoverLetterLoading(false);
+    }
+  };
+
+  const handleSaveCoverLetter = async () => {
+    if (!coverLetterJob || !coverLetterDraft.trim()) return;
+    setCoverLetterSaving(true);
+    setCoverLetterMessage(null);
+    try {
+      const res = await api.updateCoverLetter(coverLetterJob.id, coverLetterDraft);
+      setCoverLetterData(res);
+      setCoverLetterMessage({ type: 'success', text: 'Cover letter saved & PDF updated successfully!' });
+    } catch (err: any) {
+      setCoverLetterMessage({ type: 'error', text: err.message || 'Failed to save cover letter' });
+    } finally {
+      setCoverLetterSaving(false);
+    }
+  };
+
+  const handleCopyCoverLetter = () => {
+    if (!coverLetterDraft) return;
+    navigator.clipboard.writeText(coverLetterDraft);
+    setCoverLetterCopied(true);
+    setTimeout(() => setCoverLetterCopied(false), 2000);
   };
 
   const handleProcessPending = async () => {
@@ -553,15 +633,26 @@ export default function JobsPage() {
                               {isClassifying ? 'Classifying...' : 'Classify'}
                             </button>
                           ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedJob(job);
-                              }}
-                              className="text-blue-600 hover:text-blue-800 font-medium mr-2"
-                            >
-                              Details
-                            </button>
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenCoverLetter(job);
+                                }}
+                                className="text-indigo-600 hover:text-indigo-800 font-medium mr-2"
+                              >
+                                Cover Letter
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedJob(job);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 font-medium mr-2"
+                              >
+                                Details
+                              </button>
+                            </>
                           )}
                         </td>
                       </tr>
@@ -987,6 +1078,17 @@ export default function JobsPage() {
                     <FileCheck className={`w-3.5 h-3.5 mr-1.5 ${tailoringId === selectedJob.id ? 'animate-spin' : ''}`} />
                     {tailoringId === selectedJob.id ? 'Tailoring Resume...' : 'Tailor ATS Resume'}
                   </button>
+                  <button
+                    onClick={() => {
+                      const job = selectedJob;
+                      setSelectedJob(null);
+                      handleOpenCoverLetter(job);
+                    }}
+                    className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5 mr-1.5" />
+                    Cover Letter Studio
+                  </button>
                   {selectedJob.application_url && (
                     <a
                       href={selectedJob.application_url}
@@ -1002,7 +1104,232 @@ export default function JobsPage() {
             </div>
           </div>
         )}
+
+        {/* Modal: Cover Letter Studio */}
+        {coverLetterModalOpen && coverLetterJob && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full flex flex-col max-h-[92vh] overflow-hidden border border-slate-200">
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-slate-200 bg-slate-900 text-white flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <span className="p-2 bg-indigo-500/20 text-indigo-400 rounded-lg">
+                    <FileText className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-lg font-bold">Cover Letter Studio</h3>
+                    <p className="text-xs text-slate-400">
+                      {coverLetterJob.company || 'Company'} &bull; {coverLetterJob.title}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {coverLetterData && (
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        coverLetterData.validation_passed
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      }`}>
+                        {Math.round(coverLetterData.confidence_score * 100)}% Grounded
+                      </span>
+                      <span className="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full">
+                        {coverLetterData.word_count} words
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setCoverLetterModalOpen(false)}
+                    className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Tone Toolbar & Tab bar */}
+              <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Style / Tone:</span>
+                  {(['technical', 'executive', 'startup'] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => handleRegenerateCoverLetter(t)}
+                      disabled={coverLetterLoading}
+                      className={`px-3 py-1 text-xs font-medium rounded-lg transition-all capitalize ${
+                        coverLetterTone === t
+                          ? 'bg-indigo-600 text-white shadow-xs font-semibold'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="bg-slate-200 p-0.5 rounded-lg flex text-xs">
+                    <button
+                      onClick={() => setCoverLetterTab('editor')}
+                      className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                        coverLetterTab === 'editor' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Editor
+                    </button>
+                    <button
+                      onClick={() => setCoverLetterTab('preview')}
+                      className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                        coverLetterTab === 'preview' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Document Preview
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alert Messages */}
+              {coverLetterMessage && (
+                <div className={`mx-6 mt-3 p-3 rounded-lg text-xs font-medium ${
+                  coverLetterMessage.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                }`}>
+                  {coverLetterMessage.text}
+                </div>
+              )}
+
+              {/* Modal Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {coverLetterLoading ? (
+                  <div className="h-72 flex flex-col items-center justify-center space-y-3">
+                    <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin" />
+                    <p className="text-sm font-medium text-slate-600">
+                      Drafting personalized cover letter for {coverLetterJob.company || 'the role'}...
+                    </p>
+                  </div>
+                ) : coverLetterTab === 'editor' ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                        <Edit3 className="w-3.5 h-3.5 text-indigo-600" /> Cover Letter Text (Markdown)
+                      </label>
+                      <span className="text-xs text-slate-500 font-mono">
+                        {coverLetterDraft.split(/\s+/).filter(Boolean).length} words
+                      </span>
+                    </div>
+                    <textarea
+                      rows={14}
+                      value={coverLetterDraft}
+                      onChange={(e) => setCoverLetterDraft(e.target.value)}
+                      className="w-full text-sm font-sans leading-relaxed border border-slate-300 rounded-xl p-4 outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-slate-50/50 shadow-inner"
+                      placeholder="Write or edit your cover letter content..."
+                    />
+                  </div>
+                ) : (
+                  /* Document Preview Mode */
+                  <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm space-y-6 max-w-2xl mx-auto font-sans text-slate-900">
+                    {/* Letterhead */}
+                    <div className="border-b border-slate-200 pb-4">
+                      <h2 className="text-xl font-bold text-slate-900 tracking-tight">SHUBHAM PRAKASH</h2>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Mumbai, India &bull; +91 9934305886 &bull; shubhamprakash230@gmail.com
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Portfolio: https://www.shubhamprakash681.in/ &bull; LinkedIn: linkedin.com/in/shubham-prakash-dev
+                      </p>
+                    </div>
+
+                    {/* Recipient info */}
+                    <div className="text-xs text-slate-600 space-y-0.5">
+                      <p className="font-semibold text-slate-800">Hiring Team / Engineering Leadership</p>
+                      <p className="font-semibold text-slate-900">{coverLetterJob.company || 'Target Organization'}</p>
+                      <p className="text-indigo-700 font-semibold pt-1">RE: Application for {coverLetterJob.title}</p>
+                    </div>
+
+                    {/* Body */}
+                    <div className="space-y-4 text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                      {coverLetterDraft}
+                    </div>
+
+                    {/* Sign-off */}
+                    <div className="pt-4 border-t border-slate-100 text-sm text-slate-800 space-y-1">
+                      <p>Sincerely,</p>
+                      <p className="font-bold text-slate-900 pt-2">Shubham Prakash</p>
+                      <p className="text-xs text-slate-500">Full Stack &amp; Backend Software Engineer</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Evidence & Grounding Audit Footnote */}
+                {coverLetterData && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2 text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>
+                        <strong>Verified Grounding:</strong> Accenture, TCS Digital (10k+ users), TradeX (Kafka, Redis), ~3.2 yrs exp.
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {coverLetterData.verified_skills.slice(0, 6).map((skill) => (
+                        <span key={skill} className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md font-medium">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-wrap justify-between items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopyCoverLetter}
+                    className="inline-flex items-center px-3 py-2 border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
+                  >
+                    {coverLetterCopied ? <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
+                    {coverLetterCopied ? 'Copied!' : 'Copy Text'}
+                  </button>
+                  <a
+                    href={`/api/jobs/${coverLetterJob.id}/cover-letter/download/pdf`}
+                    download
+                    className="inline-flex items-center px-3 py-2 border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1.5 text-indigo-600" /> Download ATS PDF
+                  </a>
+                  <a
+                    href={`/api/jobs/${coverLetterJob.id}/cover-letter/download/md`}
+                    download
+                    className="inline-flex items-center px-3 py-2 border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1.5 text-slate-600" /> Download Markdown
+                  </a>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCoverLetterModalOpen(false)}
+                    className="px-4 py-2 border border-slate-300 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100"
+                  >
+                    Done
+                  </button>
+                  <button
+                    onClick={handleSaveCoverLetter}
+                    disabled={coverLetterSaving}
+                    className="inline-flex items-center px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors disabled:opacity-50"
+                  >
+                    <Check className={`w-3.5 h-3.5 mr-1.5 ${coverLetterSaving ? 'animate-spin' : ''}`} />
+                    {coverLetterSaving ? 'Saving...' : 'Save & Re-render PDF'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
 }
+

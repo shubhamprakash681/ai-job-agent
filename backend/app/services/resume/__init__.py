@@ -17,3 +17,4 @@ __all__ = [
     "ResumeTailor",
     "get_resume_tailor",
 ]
+

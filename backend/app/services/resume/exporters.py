@@ -322,3 +322,4 @@ class ResumeExporters:
 
         doc.build(story)
         return str(p.absolute())
+

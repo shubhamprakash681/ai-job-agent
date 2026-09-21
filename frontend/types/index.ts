@@ -227,3 +227,20 @@ export interface ResumeVersion {
   created_at?: string | null;
   updated_at?: string | null;
 }
+
+export interface CoverLetterResponse {
+  job_id: number;
+  company: string;
+  title: string;
+  content_markdown: string;
+  tone: string;
+  word_count: number;
+  file_path_pdf?: string | null;
+  file_path_md?: string | null;
+  validation_passed: boolean;
+  confidence_score: number;
+  warnings: string[];
+  verified_skills: string[];
+  generator_source: string;
+}
+

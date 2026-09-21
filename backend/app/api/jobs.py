@@ -1,5 +1,7 @@
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, Query
+import re
+from pathlib import Path
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +25,19 @@ from app.schemas.resume import ResumeVersionResponse
 from app.services.ingestion.base import JobSearchQuery
 from app.services.ingestion.pipeline import get_ingestion_pipeline
 from app.services.processing.processor import get_job_processor
+from fastapi.responses import FileResponse
+from app.models.application import Application
+from app.models.candidate import CandidateProfile
+from app.schemas.cover_letter import (
+    CoverLetterResponse,
+    CoverLetterGenerateRequest,
+    CoverLetterUpdateRequest,
+)
+from app.services.candidate.evidence_engine import get_evidence_engine
+from app.services.cover_letter import (
+    get_cover_letter_generator,
+    CoverLetterExporter,
+)
 from app.services.resume.tailor import get_resume_tailor
 from app.services.scoring.scorer import get_job_scorer
 
@@ -324,6 +339,280 @@ async def tailor_resume(
     resp.job_title = job.title
     resp.job_company = job.company
     return resp
+
+
+@router.post("/{job_id}/cover-letter", response_model=CoverLetterResponse)
+async def generate_cover_letter_endpoint(
+    job_id: int,
+    req: CoverLetterGenerateRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CoverLetterResponse:
+    """
+    Generate or regenerate an ATS-tailored, zero-hallucination cover letter for a job.
+    Exports PDF and Markdown, checks against the Evidence Engine, and links to the Application.
+    """
+    job = await db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    tone = req.tone if req else "technical"
+    custom_instructions = req.custom_instructions if req else None
+
+    generator = get_cover_letter_generator()
+    res = await generator.generate_cover_letter(
+        job=job,
+        tone=tone,
+        custom_instructions=custom_instructions,
+        db=db,
+    )
+
+    # Sync with candidate profile & application record
+    prof_res = await db.execute(select(CandidateProfile).where(CandidateProfile.user_id == current_user.id))
+    profile = prof_res.scalar_one_or_none()
+    if not profile:
+        profile = CandidateProfile(
+            user_id=current_user.id,
+            full_name=current_user.full_name or "Shubham Prakash",
+            email=current_user.email,
+            location="Mumbai, India",
+        )
+        db.add(profile)
+        await db.commit()
+        await db.refresh(profile)
+
+    app_res = await db.execute(
+        select(Application).where(
+            Application.job_id == job_id,
+            Application.candidate_id == profile.id,
+        )
+    )
+    app = app_res.scalar_one_or_none()
+    if not app:
+        app = Application(
+            job_id=job_id,
+            candidate_id=profile.id,
+            status="RESUME_READY",
+            cover_letter=res.content_markdown,
+        )
+        db.add(app)
+    else:
+        app.cover_letter = res.content_markdown
+    await db.commit()
+
+    return CoverLetterResponse(
+        job_id=job.id,
+        company=job.company or "Company",
+        title=job.title,
+        content_markdown=res.content_markdown,
+        tone=res.tone,
+        word_count=res.word_count,
+        file_path_pdf=res.file_path_pdf,
+        file_path_md=res.file_path_md,
+        validation_passed=res.validation_passed,
+        confidence_score=res.confidence_score,
+        warnings=res.warnings,
+        verified_skills=res.verified_skills,
+        generator_source=res.generator_source,
+    )
+
+
+@router.get("/{job_id}/cover-letter", response_model=CoverLetterResponse)
+async def get_cover_letter_endpoint(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CoverLetterResponse:
+    """
+    Retrieve existing cover letter for a job, or generate a tailored default on the fly.
+    """
+    job = await db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    md_path = Path(f"documents/generated/CoverLetter_Shubham_Prakash_Job{job.id}.md")
+    pdf_path = Path(f"documents/generated/CoverLetter_Shubham_Prakash_Job{job.id}.pdf")
+    content = ""
+
+    if md_path.exists():
+        content = md_path.read_text(encoding="utf-8")
+    else:
+        prof_res = await db.execute(select(CandidateProfile).where(CandidateProfile.user_id == current_user.id))
+        profile = prof_res.scalar_one_or_none()
+        if profile:
+            app_res = await db.execute(
+                select(Application).where(
+                    Application.job_id == job_id,
+                    Application.candidate_id == profile.id,
+                )
+            )
+            app = app_res.scalar_one_or_none()
+            if app and app.cover_letter:
+                content = app.cover_letter
+
+    if not content:
+        generator = get_cover_letter_generator()
+        res = await generator.generate_cover_letter(job=job, tone="technical", db=db)
+        return CoverLetterResponse(
+            job_id=job.id,
+            company=job.company or "Company",
+            title=job.title,
+            content_markdown=res.content_markdown,
+            tone=res.tone,
+            word_count=res.word_count,
+            file_path_pdf=res.file_path_pdf,
+            file_path_md=res.file_path_md,
+            validation_passed=res.validation_passed,
+            confidence_score=res.confidence_score,
+            warnings=res.warnings,
+            verified_skills=res.verified_skills,
+            generator_source=res.generator_source,
+        )
+
+    val_engine = get_evidence_engine()
+    val_report = val_engine.validate_resume_content(content)
+    words = len(re.findall(r"\b\w+\b", content))
+
+    return CoverLetterResponse(
+        job_id=job.id,
+        company=job.company or "Company",
+        title=job.title,
+        content_markdown=content,
+        tone="technical",
+        word_count=words,
+        file_path_pdf=str(pdf_path.absolute()) if pdf_path.exists() else None,
+        file_path_md=str(md_path.absolute()) if md_path.exists() else None,
+        validation_passed=val_report.passed,
+        confidence_score=val_report.confidence_score,
+        warnings=val_report.warnings,
+        verified_skills=list(val_report.verified_skills),
+        generator_source="saved_document",
+    )
+
+
+@router.put("/{job_id}/cover-letter", response_model=CoverLetterResponse)
+async def update_cover_letter_endpoint(
+    job_id: int,
+    req: CoverLetterUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CoverLetterResponse:
+    """
+    Update / edit cover letter content, perform live anti-hallucination check, and re-export PDF.
+    """
+    job = await db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    content = req.content_markdown.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Cover letter content cannot be empty")
+
+    val_engine = get_evidence_engine()
+    val_report = val_engine.validate_resume_content(content)
+
+    base_dir = Path("documents/generated")
+    base_dir.mkdir(parents=True, exist_ok=True)
+    pdf_path = str((base_dir / f"CoverLetter_Shubham_Prakash_Job{job.id}.pdf").absolute())
+    md_path = str((base_dir / f"CoverLetter_Shubham_Prakash_Job{job.id}.md").absolute())
+
+    CoverLetterExporter.export_markdown(content, md_path)
+    CoverLetterExporter.export_pdf(
+        content=content,
+        output_path=pdf_path,
+        candidate_name="Shubham Prakash",
+        company=job.company or "Company",
+        title=job.title,
+    )
+
+    prof_res = await db.execute(select(CandidateProfile).where(CandidateProfile.user_id == current_user.id))
+    profile = prof_res.scalar_one_or_none()
+    if not profile:
+        profile = CandidateProfile(
+            user_id=current_user.id,
+            full_name=current_user.full_name or "Shubham Prakash",
+            email=current_user.email,
+            location="Mumbai, India",
+        )
+        db.add(profile)
+        await db.commit()
+        await db.refresh(profile)
+
+    app_res = await db.execute(
+        select(Application).where(
+            Application.job_id == job_id,
+            Application.candidate_id == profile.id,
+        )
+    )
+    app = app_res.scalar_one_or_none()
+    if not app:
+        app = Application(
+            job_id=job_id,
+            candidate_id=profile.id,
+            status="RESUME_READY",
+            cover_letter=content,
+        )
+        db.add(app)
+    else:
+        app.cover_letter = content
+    await db.commit()
+
+    words = len(re.findall(r"\b\w+\b", content))
+
+    return CoverLetterResponse(
+        job_id=job.id,
+        company=job.company or "Company",
+        title=job.title,
+        content_markdown=content,
+        tone="custom",
+        word_count=words,
+        file_path_pdf=pdf_path,
+        file_path_md=md_path,
+        validation_passed=val_report.passed,
+        confidence_score=val_report.confidence_score,
+        warnings=val_report.warnings,
+        verified_skills=list(val_report.verified_skills),
+        generator_source="user_edited",
+    )
+
+
+@router.get("/{job_id}/cover-letter/download/{format}")
+async def download_cover_letter(
+    job_id: int,
+    format: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Download cover letter as ATS PDF or Markdown file.
+    """
+    format = format.lower()
+    if format not in ("pdf", "md"):
+        raise HTTPException(status_code=400, detail="Format must be 'pdf' or 'md'")
+
+    job = await db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    base_dir = Path("documents/generated")
+    base_dir.mkdir(parents=True, exist_ok=True)
+    file_path = base_dir / f"CoverLetter_Shubham_Prakash_Job{job.id}.{format}"
+
+    if not file_path.exists():
+        generator = get_cover_letter_generator()
+        await generator.generate_cover_letter(job=job, db=db)
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Cover letter {format.upper()} file not found")
+
+    media_type = "application/pdf" if format == "pdf" else "text/markdown; charset=utf-8"
+    company_clean = (job.company or "Company").replace(" ", "_")
+    filename = f"CoverLetter_Shubham_Prakash_{company_clean}_{job.id}.{format}"
+    return FileResponse(
+        path=str(file_path.absolute()),
+        media_type=media_type,
+        filename=filename,
+    )
 
 
 @router.delete("/{job_id}")

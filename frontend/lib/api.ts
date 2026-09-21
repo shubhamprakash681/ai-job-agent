@@ -16,6 +16,7 @@ import {
   SkillCategory,
   ClaimValidationResponse,
   ResumeValidationResponse,
+  CoverLetterResponse,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -141,6 +142,23 @@ class ApiClient {
   tailorResume(jobId: number, variantId?: string) {
     const qs = variantId ? `?variant_id=${encodeURIComponent(variantId)}` : '';
     return this.request<ResumeVersion>(`/jobs/${jobId}/tailor-resume${qs}`, { method: 'POST' });
+  }
+
+  // Cover Letter
+  getCoverLetter(jobId: number) {
+    return this.request<CoverLetterResponse>(`/jobs/${jobId}/cover-letter`);
+  }
+  generateCoverLetter(jobId: number, tone: string = 'technical', customInstructions?: string) {
+    return this.request<CoverLetterResponse>(`/jobs/${jobId}/cover-letter`, {
+      method: 'POST',
+      body: JSON.stringify({ tone, custom_instructions: customInstructions }),
+    });
+  }
+  updateCoverLetter(jobId: number, contentMarkdown: string) {
+    return this.request<CoverLetterResponse>(`/jobs/${jobId}/cover-letter`, {
+      method: 'PUT',
+      body: JSON.stringify({ content_markdown: contentMarkdown }),
+    });
   }
 
   // Settings
