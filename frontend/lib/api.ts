@@ -11,6 +11,7 @@ import {
   DashboardSummary,
   SetupStatus,
   ResumeVariant,
+  ResumeVersion,
   CandidateFact,
   SkillCategory,
   ClaimValidationResponse,
@@ -132,6 +133,15 @@ class ApiClient {
 
   // Resumes
   getResumeVariants() { return this.request<ResumeVariant[]>('/resumes/variants'); }
+  getResumeVersions(params?: Record<string, string>) {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return this.request<{ items: ResumeVersion[]; total: number; page: number; per_page: number }>(`/resumes/versions${qs}`);
+  }
+  getResumeVersion(id: number) { return this.request<ResumeVersion>(`/resumes/versions/${id}`); }
+  tailorResume(jobId: number, variantId?: string) {
+    const qs = variantId ? `?variant_id=${encodeURIComponent(variantId)}` : '';
+    return this.request<ResumeVersion>(`/jobs/${jobId}/tailor-resume${qs}`, { method: 'POST' });
+  }
 
   // Settings
   getSettings() { return this.request<Record<string, unknown>>('/settings'); }

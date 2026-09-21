@@ -19,9 +19,11 @@ from app.schemas.job import (
     ManualJobCreate,
     ManualJobResponse,
 )
+from app.schemas.resume import ResumeVersionResponse
 from app.services.ingestion.base import JobSearchQuery
 from app.services.ingestion.pipeline import get_ingestion_pipeline
 from app.services.processing.processor import get_job_processor
+from app.services.resume.tailor import get_resume_tailor
 from app.services.scoring.scorer import get_job_scorer
 
 router = APIRouter()
@@ -299,17 +301,29 @@ async def analyze_job(
     return JobScoreResponse.model_validate(score)
 
 
-@router.post("/{job_id}/tailor-resume")
+@router.post("/{job_id}/tailor-resume", response_model=ResumeVersionResponse)
 async def tailor_resume(
     job_id: int,
+    variant_id: str | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, Any]:
-    """Trigger resume tailoring for a job (Phase 6 integration)."""
+) -> ResumeVersionResponse:
+    """
+    Trigger automated resume tailoring for a job (Phase 6).
+    Reorders experience and project bullets to align with job keywords,
+    links evidence IDs, validates against anti-hallucination rules, and exports PDF/DOCX.
+    """
     job = await db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return {"message": "Resume tailoring queued", "job_id": job_id}
+
+    tailor = get_resume_tailor()
+    resume_ver = await tailor.tailor_for_job(job=job, variant_id=variant_id, db=db)
+
+    resp = ResumeVersionResponse.model_validate(resume_ver)
+    resp.job_title = job.title
+    resp.job_company = job.company
+    return resp
 
 
 @router.delete("/{job_id}")

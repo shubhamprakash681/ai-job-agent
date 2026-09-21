@@ -23,6 +23,7 @@ import {
   Zap,
   SlidersHorizontal,
   ChevronRight,
+  FileCheck,
 } from 'lucide-react';
 
 export default function JobsPage() {
@@ -59,6 +60,7 @@ export default function JobsPage() {
   const [processingBatch, setProcessingBatch] = useState(false);
   const [classifyingId, setClassifyingId] = useState<number | null>(null);
   const [analyzingId, setAnalyzingId] = useState<number | null>(null);
+  const [tailoringId, setTailoringId] = useState<number | null>(null);
   const [alertMessage, setAlertMessage] = useState<{ type: 'info' | 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -193,6 +195,21 @@ export default function JobsPage() {
       setAlertMessage({ type: 'error', text: `Analysis failed: ${err.message || 'Error'}` });
     } finally {
       setAnalyzingId(null);
+    }
+  };
+
+  const handleTailorResume = async (jobId: number, variantId?: string) => {
+    setTailoringId(jobId);
+    try {
+      const res = await api.tailorResume(jobId, variantId);
+      setAlertMessage({
+        type: 'success',
+        text: `ATS Resume tailored for Job #${jobId} (v${res.version_number})! Validation: ${res.validation_status?.toUpperCase()} (${Math.round((res.confidence_score || 1) * 100)}% confidence). View in Resumes tab.`,
+      });
+    } catch (err: any) {
+      setAlertMessage({ type: 'error', text: `Resume tailoring failed: ${err.message || 'Error'}` });
+    } finally {
+      setTailoringId(null);
     }
   };
 
@@ -955,12 +972,20 @@ export default function JobsPage() {
               {/* Actions */}
               <div className="flex justify-between items-center pt-3 border-t border-gray-100">
                 <div className="text-xs text-gray-400">Job ID: #{selectedJob.id}</div>
-                <div className="space-x-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => setSelectedJob(null)}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Close
+                  </button>
+                  <button
+                    onClick={() => handleTailorResume(selectedJob.id, selectedJob.score?.recommended_variant || undefined)}
+                    disabled={tailoringId === selectedJob.id}
+                    className="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors disabled:opacity-50"
+                  >
+                    <FileCheck className={`w-3.5 h-3.5 mr-1.5 ${tailoringId === selectedJob.id ? 'animate-spin' : ''}`} />
+                    {tailoringId === selectedJob.id ? 'Tailoring Resume...' : 'Tailor ATS Resume'}
                   </button>
                   {selectedJob.application_url && (
                     <a

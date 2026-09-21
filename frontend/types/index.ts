@@ -202,4 +202,28 @@ export interface ResumeVariant {
   display_name: string;
   description: string | null;
   is_default: boolean;
+  priority_skills?: string | null;
+}
+
+export interface ResumeVersion {
+  id: number;
+  variant_id: number;
+  job_id: number | null;
+  version_number: number;
+  content_markdown: string | null;
+  content_json: string | null;
+  file_path_docx: string | null;
+  file_path_pdf: string | null;
+  keyword_mapping: string | null;
+  evidence_mapping: string | null;
+  change_diff: string | null;
+  confidence_score: number | null;
+  unsupported_claims: string | null;
+  missing_skills: string | null;
+  validation_status: string | null;
+  validation_report: string | null;
+  job_title?: string | null;
+  job_company?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
