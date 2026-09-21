@@ -49,6 +49,7 @@ class JobResponse(BaseModel):
     source_type: str | None = None
     status: str = "active"
     fraud_risk: str | None = None
+    score: JobScoreResponse | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -108,3 +109,17 @@ class JobSourceResponse(BaseModel):
     enabled: bool
     requires_auth: bool
     description: str
+
+
+class JobClassifyResponse(BaseModel):
+    job: JobResponse
+    score: JobScoreResponse
+    processing_summary: dict[str, Any]
+
+
+class JobProcessPendingResponse(BaseModel):
+    total_processed: int
+    passed: int
+    rejected: int
+    job_ids: list[int] = Field(default_factory=list)
+

@@ -33,6 +33,7 @@ export interface Job {
   status: string;
   fraud_risk?: string | null;
   application_url: string | null;
+  score?: JobScore | null;
   created_at: string;
 }
 
@@ -63,6 +64,7 @@ export interface ManualJobCreate {
 }
 
 export interface JobScore {
+  id?: number;
   total_score: number;
   role_relevance: number;
   core_skills: number;
@@ -70,8 +72,13 @@ export interface JobScore {
   experience_fit: number;
   location_score: number;
   job_quality: number;
+  llm_score?: number | null;
   fit_category: string | null;
   recommended_variant: string | null;
+  strengths?: string | null;
+  gaps?: string | null;
+  risks?: string | null;
+  reasoning?: string | null;
 }
 
 export interface Application {

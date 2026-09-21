@@ -88,6 +88,16 @@ class ApiClient {
   getJobSources() {
     return this.request<JobSource[]>('/jobs/sources');
   }
+  classifyJob(id: number) {
+    return this.request<{ job: Job; score: JobScore; processing_summary: Record<string, unknown> }>(`/jobs/${id}/classify`, {
+      method: 'POST',
+    });
+  }
+  processPendingJobs(limit: number = 50) {
+    return this.request<{ total_processed: number; passed: number; rejected: number; job_ids: number[] }>(`/jobs/process-pending?limit=${limit}`, {
+      method: 'POST',
+    });
+  }
 
   // Applications  
   getApplications(params?: Record<string, string>) {

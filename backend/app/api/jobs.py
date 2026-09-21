@@ -8,9 +8,11 @@ from app.db.session import get_db
 from app.models.job import Job, JobScore
 from app.models.user import User
 from app.schemas.job import (
+    JobClassifyResponse,
     JobFetchRequest,
     JobFetchResponse,
     JobListResponse,
+    JobProcessPendingResponse,
     JobResponse,
     JobScoreResponse,
     JobSourceResponse,
@@ -19,6 +21,7 @@ from app.schemas.job import (
 )
 from app.services.ingestion.base import JobSearchQuery
 from app.services.ingestion.pipeline import get_ingestion_pipeline
+from app.services.processing.processor import get_job_processor
 
 router = APIRouter()
 
@@ -60,9 +63,22 @@ async def list_jobs(
 
     result = await db.execute(query)
     jobs = result.scalars().all()
+    job_ids = [j.id for j in jobs]
+
+    scores_by_job: dict[int, JobScoreResponse] = {}
+    if job_ids:
+        score_res = await db.execute(select(JobScore).where(JobScore.job_id.in_(job_ids)))
+        for s in score_res.scalars().all():
+            scores_by_job[s.job_id] = JobScoreResponse.model_validate(s)
+
+    items: list[JobResponse] = []
+    for j in jobs:
+        resp = JobResponse.model_validate(j)
+        resp.score = scores_by_job.get(j.id)
+        items.append(resp)
 
     return JobListResponse(
-        items=[JobResponse.model_validate(j) for j in jobs],
+        items=items,
         total=total,
         page=page,
         per_page=per_page,
@@ -138,6 +154,25 @@ async def list_job_sources(
     return [JobSourceResponse(**s) for s in sources]
 
 
+@router.post("/process-pending", response_model=JobProcessPendingResponse)
+async def process_pending_jobs_endpoint(
+    limit: int = Query(50, ge=1, le=200),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> JobProcessPendingResponse:
+    """
+    Batch process all active opportunities that do not have a classification score yet.
+    """
+    processor = get_job_processor()
+    res = await processor.process_pending_jobs(db, limit=limit)
+    return JobProcessPendingResponse(
+        total_processed=res["total_processed"],
+        passed=res["passed"],
+        rejected=res["rejected"],
+        job_ids=res["job_ids"],
+    )
+
+
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job(
     job_id: int,
@@ -148,7 +183,12 @@ async def get_job(
     job = await db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return JobResponse.model_validate(job)
+    res = await db.execute(select(JobScore).where(JobScore.job_id == job_id))
+    score = res.scalar_one_or_none()
+    resp = JobResponse.model_validate(job)
+    if score:
+        resp.score = JobScoreResponse.model_validate(score)
+    return resp
 
 
 @router.get("/{job_id}/score", response_model=JobScoreResponse | None)
@@ -163,6 +203,35 @@ async def get_job_score(
     if not score:
         return None
     return JobScoreResponse.model_validate(score)
+
+
+@router.post("/{job_id}/classify", response_model=JobClassifyResponse)
+async def classify_job_endpoint(
+    job_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> JobClassifyResponse:
+    """
+    Run prefilters and deep classification (LLM or heuristic) for a single job.
+    Updates the job status, generates JobScore, and logs an audit trail.
+    """
+    processor = get_job_processor()
+    try:
+        job, score, summary = await processor.process_job(job_id, db)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to classify job: {str(e)}")
+
+    job_resp = JobResponse.model_validate(job)
+    score_resp = JobScoreResponse.model_validate(score)
+    job_resp.score = score_resp
+
+    return JobClassifyResponse(
+        job=job_resp,
+        score=score_resp,
+        processing_summary=summary,
+    )
 
 
 @router.post("/{job_id}/analyze")
