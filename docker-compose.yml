@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     container_name: ai_job_agent_postgres_container
     environment:
-      POSTGRES_USER: jobagent
-      POSTGRES_PASSWORD: jobagent_dev
-      POSTGRES_DB: jobagent
+      POSTGRES_USER: ${POSTGRES_USER:-jobagent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-jobagent}
     ports:
       - '5431:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U jobagent']
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER:-jobagent}']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -22,8 +22,8 @@ services:
     container_name: ai_job_agent_pgadmin_container
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?PGADMIN_EMAIL must be set in .env}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?PGADMIN_PASSWORD must be set in .env}
     ports:
       - "5050:80"
     depends_on:
@@ -54,10 +54,10 @@ services:
     ports:
       - '8000:8000'
     environment:
-      - DATABASE_URL=postgresql+asyncpg://jobagent:jobagent_dev@postgres:5432/jobagent
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-a-long-random-string}
-      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-jobagent}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jobagent}}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY must be set in .env}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
       - DRY_RUN=${DRY_RUN:-true}
       - HUMAN_APPROVAL_REQUIRED=${HUMAN_APPROVAL_REQUIRED:-true}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
@@ -87,8 +87,8 @@ services:
     environment:
       - HOSTNAME=0.0.0.0
       - PORT=3000
-      - BACKEND_API_URL=http://backend:8000
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - BACKEND_API_URL=${BACKEND_API_URL:-http://backend:8000}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     depends_on:
       - backend
     restart: unless-stopped

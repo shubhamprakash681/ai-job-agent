@@ -15,9 +15,12 @@ if [ ! -d "$BACKUP_DIR" ]; then
     exit 1
 fi
 
-echo "Restoring PostgreSQL..."
+DB_USER="${POSTGRES_USER:-jobagent}"
+DB_NAME="${POSTGRES_DB:-jobagent}"
+
+echo "Restoring PostgreSQL (User: $DB_USER, DB: $DB_NAME)..."
 if [ -f "$BACKUP_DIR/database.sql" ]; then
-    docker compose exec -T postgres psql -U jobagent -d jobagent < "$BACKUP_DIR/database.sql"
+    docker compose exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" < "$BACKUP_DIR/database.sql"
     echo "Database restored."
 else
     echo "No database backup found."

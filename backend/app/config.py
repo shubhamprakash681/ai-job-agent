@@ -4,12 +4,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     APP_NAME: str = "AI Job Agent"
-    ENVIRONMENT: str = "development"
+    ENVIRONMENT: str = "production"
     APP_DEBUG: bool = False
     SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_MINUTES: int = 1440
-    DATABASE_URL: str = "postgresql+asyncpg://jobagent:jobagent@localhost:5431/jobagent"
+    DATABASE_URL: str
     REDIS_URL: str = "redis://localhost:6379/0"
     DRY_RUN: bool = True
     HUMAN_APPROVAL_REQUIRED: bool = True

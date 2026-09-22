@@ -19,17 +19,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger = get_logger(__name__)
     logger.info("Starting AI Job Agent API...")
 
-    # Initialize database tables in development or for SQLite
-    if settings.ENVIRONMENT == "development" or "sqlite" in settings.DATABASE_URL:
-        logger.info("Initializing database tables...")
+    # Initialize database tables and ensure default variants exist
+    try:
         from app.db.session import init_db
-
         await init_db()
 
-        # Seed default resume variants
         from app.db.init_db import init_db as seed_db
-
         await seed_db()
+    except Exception as e:
+        logger.warning(f"Database initialization check notice: {e}")
 
     logger.info("AI Job Agent API started successfully.")
     yield
