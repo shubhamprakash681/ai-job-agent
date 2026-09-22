@@ -1,0 +1,119 @@
+# Resume Variants Configuration
+# Defines how the 4 resume variants position Shubham's verified experience
+variants:
+  - id: "java-react-fullstack"
+    name: "Java + React Full Stack"
+    is_default: true
+    target_roles:
+      - "Full Stack Developer"
+      - "Java Full Stack Engineer"
+      - "Full Stack Software Engineer"
+    tagline: "Full Stack Engineer | Java, Spring Boot & React Ecosystem"
+    summary_emphasis: "Balanced full-stack delivery with Java/Spring Boot microservices on the backend and React/TypeScript on the frontend."
+    priority_skills:
+      - "Java"
+      - "Spring Boot"
+      - "React"
+      - "TypeScript"
+      - "REST APIs"
+      - "Microservices"
+      - "PostgreSQL"
+      - "Docker"
+    bullet_point_ordering:
+      - "exp.tcs.bp1"       # Java + React full stack
+      - "exp.tcs.bp4"       # Caching + Chart.js dashboard
+      - "exp.tcs.bp2"       # Auth & JWT SSO
+      - "exp.tcs.bp3"       # Spring Cloud Gateway & Eureka
+      - "exp.accenture.bp1" # Enterprise microservices
+      - "proj.tradex.bp1"   # Microservices platform
+      - "proj.videoshare.bp1" # Full stack video platform
+    primary_project: "proj.tradex"
+    secondary_project: "proj.videoshare"
+
+  - id: "java-backend"
+    name: "Java Backend / Spring Boot"
+    is_default: false
+    target_roles:
+      - "Backend Engineer"
+      - "Java Backend Developer"
+      - "Spring Boot Developer"
+      - "API Engineer"
+    tagline: "Backend Software Engineer | Java, Spring Boot & Microservices"
+    summary_emphasis: "Deep backend engineering focusing on Spring Boot microservices, high-throughput REST APIs, SQL optimization, and clean architecture."
+    priority_skills:
+      - "Java"
+      - "Spring Boot"
+      - "Spring Cloud"
+      - "Microservices"
+      - "PostgreSQL"
+      - "JPA / Hibernate"
+      - "Redis"
+      - "REST APIs"
+      - "JWT / OAuth2"
+    bullet_point_ordering:
+      - "exp.tcs.bp3"       # Spring Cloud Gateway & Eureka
+      - "exp.tcs.bp2"       # JWT & OAuth2 SSO
+      - "exp.tcs.bp4"       # Caching & 10k users optimization
+      - "exp.accenture.bp1" # Enterprise applications
+      - "proj.tradex.bp1"   # Spring Boot microservices
+      - "proj.tradex.bp2"   # Kafka streaming & Redis
+    primary_project: "proj.tradex"
+    secondary_project: "proj.videoshare"
+
+  - id: "fullstack-engineer"
+    name: "Full Stack Engineer"
+    is_default: false
+    target_roles:
+      - "Full Stack Software Engineer"
+      - "Software Engineer - Full Stack"
+      - "Product Engineer"
+    tagline: "Full Stack Software Engineer | Modern Web Architecture & Cloud"
+    summary_emphasis: "End-to-end product development across React, Next.js, Node.js, and Java, containerization with Docker, and cloud deployments."
+    priority_skills:
+      - "React"
+      - "Next.js"
+      - "TypeScript"
+      - "Node.js"
+      - "Java"
+      - "MongoDB"
+      - "PostgreSQL"
+      - "Docker"
+      - "AWS EC2"
+    bullet_point_ordering:
+      - "exp.tcs.bp1"       # Java + React + Node.js
+      - "proj.videoshare.bp1" # Full stack streaming
+      - "proj.videoshare.bp2" # MongoDB + AWS EC2
+      - "exp.sylvr.bp1"     # MERN stack 50+ orgs
+      - "exp.sylvr.bp2"     # Docker & Nginx
+      - "proj.tradex.bp1"   # Microservices
+    primary_project: "proj.videoshare"
+    secondary_project: "proj.tradex"
+
+  - id: "backend-distributed"
+    name: "Backend / Distributed Systems"
+    is_default: false
+    target_roles:
+      - "Distributed Systems Engineer"
+      - "Platform Engineer"
+      - "High Scale Backend Engineer"
+    tagline: "Distributed Systems & Backend Engineer | Kafka, Redis & Microservices"
+    summary_emphasis: "Distributed backend architecture, event streaming with Kafka, real-time WebSockets, sub-millisecond Redis caching, and fault-tolerant microservices."
+    priority_skills:
+      - "Java"
+      - "Kafka"
+      - "Redis"
+      - "WebSockets"
+      - "Spring Cloud"
+      - "Microservices"
+      - "System Design"
+      - "PostgreSQL"
+      - "Docker"
+    bullet_point_ordering:
+      - "proj.tradex.bp2"   # Kafka, WebSockets, Redis, PostgreSQL
+      - "proj.tradex.bp1"   # Microservices + API Gateway + Eureka
+      - "exp.tcs.bp4"       # 10k users caching & performance
+      - "exp.tcs.bp3"       # Spring Cloud Gateway & routing
+      - "exp.tcs.bp2"       # Distributed Auth & SSO
+    primary_project: "proj.tradex"
+    secondary_project: "proj.videoshare"
+

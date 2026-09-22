@@ -1,0 +1,7 @@
+I am writing to express my strong interest in the Senior Software Engineer (Java + React) opening at Swiggy India. With ~3.2 years of specialized experience in Java, Spring Boot microservices, and modern React full-stack engineering, I focus on building resilient, high-throughput backend services and clean web architectures.
+
+In my production engineering roles at Accenture and TCS Digital, I engineered scalable microservices handling concurrent workloads of 10,000+ active users. At TCS Digital, I architected RESTful endpoints, optimized relational queries in PostgreSQL, and integrated Redis caching to dramatically reduce database overhead. I emphasize strict type safety, comprehensive unit testing, and maintainable domain-driven design.
+
+In the distributed systems domain, I built TradeX, an event-driven stock trading platform powered by Spring Boot, Apache Kafka event streams, Redis caching, and WebSockets for real-time market data dissemination. On the frontend, my work with React and TypeScript ensures high performance, clean state management, and intuitive user experiences.
+
+Given Swiggy India's focus on Java, Kafka, Microservices, React, I am confident in my ability to hit the ground running. I hold a 30-day notice period and look forward to discussing how my background can support your engineering initiatives.

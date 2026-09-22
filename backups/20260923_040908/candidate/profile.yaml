@@ -1,0 +1,50 @@
+# Master Candidate Profile
+full_name: "Shubham Prakash"
+first_name: "Shubham"
+last_name: "Prakash"
+title: "Software Engineer | Java & Spring Boot Full Stack"
+email: "shubhamprakash681@gmail.com"
+phone: "+91-6299783192"
+location: "Mumbai, India"
+citizenship: "India"
+work_authorization: "India (Citizen)"
+
+links:
+  portfolio: "https://www.shubhamprakash681.in/"
+  github: "https://github.com/shubhamprakash681"
+  linkedin: "https://www.linkedin.com/in/shubham-prakash"
+
+summary: >
+  Software Engineer with 3+ years of experience building scalable applications using Java, Spring Boot,
+  Spring Cloud, Microservices, React, and Node.js. Strong in System Design, DSA, REST APIs, distributed
+  systems, authentication, and cloud-native development, with production experience in Kafka, Redis,
+  PostgreSQL, Docker, AWS, JWT, and OAuth2.
+
+current_employment:
+  company: "Accenture"
+  role: "Packaged App Development Analyst"
+  start_date: "2026-04"
+  is_current: true
+  location: "Mumbai, India"
+
+preferences:
+  total_experience_years: 3.2
+  total_experience_months: 39
+  notice_period_days: 30
+  current_ctc: "Confidential / Discuss during interview"
+  expected_ctc: "Competitive market rate"
+  target_roles:
+    - "Senior Software Engineer"
+    - "Software Engineer - Backend"
+    - "Full Stack Engineer (Java + React)"
+    - "Spring Boot Developer"
+    - "Distributed Systems Engineer"
+  preferred_locations:
+    - "Mumbai"
+    - "Bengaluru"
+    - "Hyderabad"
+    - "Pune"
+    - "Remote"
+  remote_preference: "hybrid_or_remote"
+  willing_to_relocate: true
+

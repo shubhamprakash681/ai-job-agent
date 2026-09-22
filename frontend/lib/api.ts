@@ -29,6 +29,11 @@ import {
   ApplicationStatusUpdateRequest,
   NotificationListResponse,
   InAppNotification,
+  FunnelResponse,
+  BreakdownsResponse,
+  TimelineResponse,
+  LLMUsageResponse,
+  LearningLoopResponse,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -241,6 +246,23 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  // Analytics
+  getAnalyticsFunnel() {
+    return this.request<FunnelResponse>('/analytics/funnel');
+  }
+  getAnalyticsBreakdowns() {
+    return this.request<BreakdownsResponse>('/analytics/breakdowns');
+  }
+  getAnalyticsTimeline(days: number = 30) {
+    return this.request<TimelineResponse>(`/analytics/timeline?days=${days}`);
+  }
+  getAnalyticsLLMUsage() {
+    return this.request<LLMUsageResponse>('/analytics/llm-usage');
+  }
+  getAnalyticsInsights() {
+    return this.request<LearningLoopResponse>('/analytics/insights');
   }
 
   // Settings

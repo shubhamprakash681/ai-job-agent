@@ -391,4 +391,112 @@ export interface NotificationListResponse {
   total: number;
 }
 
+// Phase 10 — Analytics Types
+export interface FunnelStage {
+  key: string;
+  name: string;
+  count: number;
+  drop_off_count: number;
+  drop_off_pct: number;
+  conversion_pct: number;
+}
+
+export interface FunnelSummaryRates {
+  match_to_application_rate: number;
+  application_to_interview_rate: number;
+  interview_to_offer_rate: number;
+  overall_conversion_rate: number;
+}
+
+export interface FunnelResponse {
+  stages: FunnelStage[];
+  summary_rates: FunnelSummaryRates;
+}
+
+export interface SourceBreakdown {
+  source: string;
+  jobs_count: number;
+  applied_count: number;
+  interviews_count: number;
+  offers_count: number;
+  response_rate: number;
+  interview_rate: number;
+}
+
+export interface VariantBreakdown {
+  variant_id?: number | null;
+  variant_name: string;
+  display_name: string;
+  applications_count: number;
+  interviews_count: number;
+  offers_count: number;
+  conversion_rate: number;
+}
+
+export interface LocationBreakdown {
+  location: string;
+  jobs_count: number;
+  applications_count: number;
+}
+
+export interface CompanyBreakdown {
+  company: string;
+  total_jobs: number;
+  applied_count: number;
+  highest_stage: string;
+}
+
+export interface BreakdownsResponse {
+  sources: SourceBreakdown[];
+  variants: VariantBreakdown[];
+  locations: LocationBreakdown[];
+  companies: CompanyBreakdown[];
+}
+
+export interface TimelinePoint {
+  date: string;
+  discovered: number;
+  applied: number;
+  interviews: number;
+}
+
+export interface TimelineResponse {
+  points: TimelinePoint[];
+  period_days: number;
+}
+
+export interface LLMUsageResponse {
+  total_requests: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  estimated_total_cost_usd: number;
+  by_provider: Record<string, {
+    requests: number;
+    input_tokens: number;
+    output_tokens: number;
+    estimated_cost_usd: number;
+    avg_duration_ms: number;
+  }>;
+  by_operation: Record<string, {
+    requests: number;
+    total_tokens: number;
+  }>;
+  avg_duration_ms: number;
+}
+
+export interface LearningInsight {
+  type: string;
+  title: string;
+  recommendation: string;
+  rationale: string;
+  impact: string;
+}
+
+export interface LearningLoopResponse {
+  insights: LearningInsight[];
+  top_variant: string | null;
+  top_source: string | null;
+  candidate_facts_preserved: boolean;
+}
+
 

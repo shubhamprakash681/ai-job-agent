@@ -1,0 +1,155 @@
+# Candidate Work Experience Records
+experiences:
+  - id: "exp.accenture"
+    company: "Accenture"
+    role: "Packaged App Development Analyst"
+    location: "Mumbai, India"
+    start_date: "2026-04"
+    end_date: null
+    is_current: true
+    employment_type: "full_time"
+    summary: "Building enterprise applications and microservices using Java and modern cloud architecture."
+    technologies:
+      - "Java"
+      - "Spring Boot"
+      - "Microservices"
+      - "REST APIs"
+      - "Enterprise Applications"
+    bullet_points:
+      - id: "exp.accenture.bp1"
+        fact_id: "fact.exp.accenture.enterprise_apps"
+        text: "Developing scalable enterprise applications using Java, Spring Boot microservices, and modern API standards."
+        metrics: []
+        skills: ["Java", "Spring Boot", "Microservices", "REST APIs"]
+        verified: true
+
+  - id: "exp.tcs"
+    company: "Tata Consultancy Services (TCS Digital)"
+    role: "Software Developer"
+    location: "Mumbai, India"
+    start_date: "2023-06"
+    end_date: "2026-04"
+    is_current: false
+    employment_type: "full_time"
+    summary: "Developed enterprise applications using Java, Spring Boot Microservices, React, TypeScript, and Node.js."
+    technologies:
+      - "Java"
+      - "Spring Boot"
+      - "Spring Cloud"
+      - "Eureka"
+      - "Spring Cloud Gateway"
+      - "React"
+      - "TypeScript"
+      - "Node.js"
+      - "JWT"
+      - "OAuth2"
+      - "Auth0"
+      - "Chart.js"
+      - "ArcGIS"
+      - "RESTful APIs"
+    bullet_points:
+      - id: "exp.tcs.bp1"
+        fact_id: "fact.exp.tcs.microservices"
+        text: "Developed enterprise applications using Java, Spring Boot Microservices, React, TypeScript, and Node.js, following layered architecture and RESTful API principles."
+        metrics: []
+        skills: ["Java", "Spring Boot", "React", "TypeScript", "Node.js", "Microservices", "REST APIs"]
+        verified: true
+
+      - id: "exp.tcs.bp2"
+        fact_id: "fact.exp.tcs.auth_migration"
+        text: "Migrated ArcGIS authentication from frontend to backend and implemented JWT, OAuth2, and Auth0 SSO across 3 enterprise applications, resolving authentication and login issues."
+        metrics:
+          - name: "enterprise_applications_count"
+            value: 3
+            description: "3 enterprise applications secured with JWT, OAuth2, and Auth0 SSO"
+        skills: ["JWT", "OAuth2", "Auth0", "ArcGIS", "SSO", "Spring Security"]
+        verified: true
+
+      - id: "exp.tcs.bp3"
+        fact_id: "fact.exp.tcs.spring_cloud"
+        text: "Integrated Spring Cloud Eureka Service Discovery and Spring Cloud Gateway for centralized routing and service communication, improving scalability and maintainability."
+        metrics: []
+        skills: ["Spring Cloud", "Eureka", "Spring Cloud Gateway", "Microservices", "Routing"]
+        verified: true
+
+      - id: "exp.tcs.bp4"
+        fact_id: "fact.exp.tcs.cache_optimization"
+        text: "Optimized caching, data structures, and session management, supporting 10,000+ concurrent users with zero data conflicts and achieving up to 80% faster load times; built real-time Chart.js dashboards improving engagement by up to 90%."
+        metrics:
+          - name: "concurrent_users"
+            value: 10000
+            description: "Supported 10,000+ concurrent users with zero data conflicts"
+          - name: "load_time_improvement"
+            value: 80
+            unit: "percent"
+            description: "Up to 80% faster load times"
+          - name: "engagement_improvement"
+            value: 90
+            unit: "percent"
+            description: "Improved user engagement by up to 90%"
+        skills: ["Caching", "Session Management", "Chart.js", "Performance Optimization"]
+        verified: true
+
+  - id: "exp.sylvr"
+    company: "Sylvr"
+    role: "Software Engineer Intern"
+    location: "Remote, India"
+    start_date: "2023-03"
+    end_date: "2023-06"
+    is_current: false
+    employment_type: "internship"
+    summary: "Developed MERN stack applications for financial data visualization serving 50+ organizations."
+    technologies:
+      - "React"
+      - "Node.js"
+      - "MongoDB"
+      - "Express"
+      - "Docker"
+      - "Nginx"
+      - "Linux"
+      - "REST APIs"
+      - "RBAC"
+    bullet_points:
+      - id: "exp.sylvr.bp1"
+        fact_id: "fact.exp.sylvr.mern_financial"
+        text: "Developed MERN stack applications for financial data visualization serving 50+ organizations, implementing REST APIs, OTP authentication, and role-based access control."
+        metrics:
+          - name: "organizations_served"
+            value: 50
+            description: "Served 50+ organizations"
+        skills: ["React", "Node.js", "MongoDB", "Express", "REST APIs", "OTP Auth", "RBAC"]
+        verified: true
+
+      - id: "exp.sylvr.bp2"
+        fact_id: "fact.exp.sylvr.docker_deployment"
+        text: "Containerized applications using Docker and deployed on Linux servers with Nginx, achieving 98% uptime."
+        metrics:
+          - name: "uptime"
+            value: 98
+            unit: "percent"
+            description: "98% uptime achieved"
+        skills: ["Docker", "Nginx", "Linux", "Deployment"]
+        verified: true
+
+  - id: "exp.iit_patna"
+    company: "IIT Patna"
+    role: "Research Intern"
+    location: "Remote, India"
+    start_date: "2022-01"
+    end_date: "2022-05"
+    is_current: false
+    employment_type: "internship"
+    summary: "Deep learning research involving emotion prediction and psychiatric disorder prediction from BCI signals."
+    technologies:
+      - "Python"
+      - "Deep Learning"
+      - "BCI Signals"
+      - "Audio Classification"
+    bullet_points:
+      - id: "exp.iit_patna.bp1"
+        fact_id: "fact.exp.iit_patna.deep_learning"
+        text: "Worked on deep learning research involving emotion prediction, psychiatric disorder prediction from BCI signals, and audio classification."
+        metrics: []
+        skills: ["Python", "Deep Learning", "Signal Processing"]
+        verified: true
+

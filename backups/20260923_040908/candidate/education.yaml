@@ -1,0 +1,25 @@
+# Candidate Education & Certifications
+education:
+  - id: "edu.cusat"
+    institution: "Cochin University of Science and Technology"
+    degree: "Bachelor of Technology (B.Tech)"
+    field_of_study: "Electronics and Communication Engineering"
+    start_date: "2019-06"
+    end_date: "2023-03"
+    is_completed: true
+    gpa:
+      score: 8.91
+      scale: 10.0
+      display: "8.91 / 10"
+    location: "Kochi, Kerala, India"
+    highlights:
+      - "Strong foundation in Computer Science fundamentals, DSA, and digital signal processing"
+      - "Graduated with First Class with Distinction"
+
+certifications:
+  - id: "cert.iit_patna"
+    name: "Research Internship Certificate in Deep Learning"
+    issuer: "IIT Patna"
+    issue_date: "2022-05"
+    description: "Deep learning research involving emotion prediction and BCI signal processing."
+

@@ -1,0 +1,109 @@
+# Candidate Project Records
+projects:
+  - id: "proj.tradex"
+    name: "TradeX"
+    title: "Realtime Paper Trading Platform"
+    start_date: "2026-06"
+    end_date: null
+    is_ongoing: true
+    status: "active"
+    badges:
+      - "Live"
+      - "Swagger"
+      - "API"
+      - "UI"
+    summary: >
+      Designed and built a scalable stock trading platform using Spring Boot microservices
+      with API Gateway, Eureka Service Discovery, authentication, market, and portfolio services.
+    architecture:
+      style: "Microservices"
+      components:
+        - "API Gateway (routing, rate limiting)"
+        - "Eureka Service Discovery"
+        - "Authentication Service"
+        - "Market Data Service"
+        - "Portfolio Management Service"
+    features:
+      - "Self-contained market-data system generating price history for 15 Indian stocks/ETFs across 10 years with OHLCV data"
+      - "Real-time price streaming using Kafka and WebSockets"
+      - "Sub-millisecond caching with Redis and persistence with PostgreSQL"
+    technologies:
+      - "Java"
+      - "Spring Boot"
+      - "Spring Cloud"
+      - "Eureka"
+      - "API Gateway"
+      - "Kafka"
+      - "WebSockets"
+      - "Redis"
+      - "PostgreSQL"
+      - "Docker"
+      - "System Design"
+    metrics:
+      - name: "stocks_etfs_tracked"
+        value: 15
+        description: "15 Indian stocks/ETFs price history generation"
+      - name: "historical_data_span"
+        value: 10
+        unit: "years"
+        description: "10 years of OHLCV historical data"
+    bullet_points:
+      - id: "proj.tradex.bp1"
+        fact_id: "fact.proj.tradex.microservices"
+        text: "Designed a scalable stock trading platform using Spring Boot microservices with API Gateway, Eureka Service Discovery, authentication, market, and portfolio services."
+        skills: ["Spring Boot", "Microservices", "API Gateway", "Eureka", "System Design"]
+        verified: true
+
+      - id: "proj.tradex.bp2"
+        fact_id: "fact.proj.tradex.kafka_websockets"
+        text: "Built a self-contained market-data system generating price history for 15 Indian stocks/ETFs across 10 years with OHLCV data; implemented real-time price streaming using Kafka and WebSockets with Redis caching and PostgreSQL persistence."
+        skills: ["Kafka", "WebSockets", "Redis", "PostgreSQL", "Data Streaming", "Performance"]
+        verified: true
+
+  - id: "proj.videoshare"
+    name: "VideoShare"
+    title: "Video Sharing & Streaming Platform"
+    start_date: "2024-12"
+    end_date: "2025-04"
+    is_ongoing: false
+    status: "completed"
+    badges:
+      - "Live"
+      - "API"
+      - "UI"
+    summary: >
+      Built a full-featured YouTube-like video sharing platform with authentication, video streaming,
+      likes, comments, subscriptions, playlists, and REST APIs.
+    features:
+      - "Video streaming with adaptive playback and chunked uploads"
+      - "MongoDB Atlas fuzzy search for instant video and creator discovery"
+      - "NSFW content classification pipeline for videos and thumbnail screening"
+      - "Containerized deployment on AWS EC2 behind Nginx reverse proxy with 99% uptime"
+    technologies:
+      - "Node.js"
+      - "React"
+      - "MongoDB Atlas"
+      - "Express"
+      - "Docker"
+      - "AWS EC2"
+      - "Nginx"
+      - "REST APIs"
+      - "Authentication"
+    metrics:
+      - name: "uptime"
+        value: 99
+        unit: "percent"
+        description: "99% uptime on AWS EC2 with Nginx"
+    bullet_points:
+      - id: "proj.videoshare.bp1"
+        fact_id: "fact.proj.videoshare.full_features"
+        text: "Built a YouTube-like video-sharing platform with authentication, video streaming, likes, comments, subscriptions, playlists, and REST APIs."
+        skills: ["Node.js", "React", "REST APIs", "Streaming", "Full Stack"]
+        verified: true
+
+      - id: "proj.videoshare.bp2"
+        fact_id: "fact.proj.videoshare.fuzzy_search_ml"
+        text: "Implemented MongoDB Atlas fuzzy search and an NSFW content classification pipeline for videos and thumbnails; deployed using Docker, AWS EC2, and Nginx with 99% uptime."
+        skills: ["MongoDB Atlas", "Fuzzy Search", "Machine Learning", "Docker", "AWS EC2", "Nginx"]
+        verified: true
+
