@@ -7,6 +7,9 @@ import {
   JobFetchResponse,
   ManualJobCreate,
   Application,
+  ApplicationDetail,
+  ApplicationListResponse,
+  ApplicationQuestion,
   CandidateProfile,
   DashboardSummary,
   SetupStatus,
@@ -109,7 +112,38 @@ class ApiClient {
   // Applications  
   getApplications(params?: Record<string, string>) {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-    return this.request<{ items: Application[]; total: number }>(`/applications${qs}`);
+    return this.request<ApplicationListResponse>(`/applications${qs}`);
+  }
+  getApplication(id: number) {
+    return this.request<ApplicationDetail>(`/applications/${id}`);
+  }
+  prepareApplication(jobId: number, variantId?: string, tone: string = 'technical') {
+    return this.request<ApplicationDetail>(`/applications/prepare/${jobId}`, {
+      method: 'POST',
+      body: JSON.stringify({ variant_id: variantId, tone }),
+    });
+  }
+  approveApplication(id: number, options: { user_approved?: boolean; dry_run?: boolean; notes?: string } = {}) {
+    return this.request<{ message: string; status: string; evidence: Record<string, any> }>(`/applications/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({
+        user_approved: options.user_approved ?? true,
+        dry_run: options.dry_run,
+        notes: options.notes,
+      }),
+    });
+  }
+  rejectApplication(id: number, reason?: string) {
+    return this.request<{ message: string }>(`/applications/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+  updateQuestion(appId: number, questionId: number, finalAnswer: string, approved: boolean = true) {
+    return this.request<ApplicationQuestion>(`/applications/${appId}/questions/${questionId}`, {
+      method: 'POST',
+      body: JSON.stringify({ final_answer: finalAnswer, approved }),
+    });
   }
 
   // Candidate

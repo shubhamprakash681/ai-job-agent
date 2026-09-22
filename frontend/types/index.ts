@@ -81,14 +81,63 @@ export interface JobScore {
   reasoning?: string | null;
 }
 
+export interface ApplicationQuestion {
+  id: number;
+  application_id: number;
+  question: string;
+  proposed_answer: string | null;
+  final_answer: string | null;
+  answer_source: string | null;
+  confidence: number;
+  requires_human: boolean;
+  approved: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ApplicationEvent {
+  id: number;
+  application_id: number;
+  event_type: string;
+  event_data: string | null;
+  created_at: string;
+}
+
 export interface Application {
   id: number;
   job_id: number;
+  candidate_id: number;
   status: string;
+  resume_version_id?: number | null;
+  cover_letter?: string | null;
+  application_url?: string | null;
   applied_at: string | null;
   job_score: number | null;
   notes: string | null;
+  submission_evidence?: string | null;
+  job_title?: string | null;
+  job_company?: string | null;
   created_at: string;
+  updated_at?: string | null;
+}
+
+export interface ApplicationDetail extends Application {
+  job_location?: string | null;
+  job_description?: string | null;
+  resume_version_number?: number | null;
+  resume_pdf_path?: string | null;
+  questions: ApplicationQuestion[];
+  events: ApplicationEvent[];
+  submission_evidence_parsed?: Record<string, any> | null;
+}
+
+export interface ApplicationListResponse {
+  items: Application[];
+  total: number;
+  page: number;
+  per_page: number;
+  daily_count: number;
+  daily_limit: number;
 }
 
 export interface CandidateProfile {

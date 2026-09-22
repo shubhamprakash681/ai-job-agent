@@ -29,6 +29,7 @@ import {
   Copy,
   Check,
   Edit3,
+  Send,
 } from 'lucide-react';
 
 export default function JobsPage() {
@@ -78,6 +79,7 @@ export default function JobsPage() {
   const [classifyingId, setClassifyingId] = useState<number | null>(null);
   const [analyzingId, setAnalyzingId] = useState<number | null>(null);
   const [tailoringId, setTailoringId] = useState<number | null>(null);
+  const [preparingAppId, setPreparingAppId] = useState<number | null>(null);
   const [alertMessage, setAlertMessage] = useState<{ type: 'info' | 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -291,6 +293,24 @@ export default function JobsPage() {
     navigator.clipboard.writeText(coverLetterDraft);
     setCoverLetterCopied(true);
     setTimeout(() => setCoverLetterCopied(false), 2000);
+  };
+
+  const handlePrepareApplication = async (jobId: number) => {
+    setPreparingAppId(jobId);
+    try {
+      const detail = await api.prepareApplication(jobId);
+      setAlertMessage({
+        type: 'success',
+        text: `Application packet prepared for ${detail.job_company || 'Job'}! Resume, cover letter, and screening questions bundled (Status: ${detail.status}). Navigate to Applications tab to review and authorize.`,
+      });
+      if (selectedJob && selectedJob.id === jobId) {
+        setSelectedJob(null);
+      }
+    } catch (err: any) {
+      setAlertMessage({ type: 'error', text: `Failed to prepare application: ${err.message || 'Error'}` });
+    } finally {
+      setPreparingAppId(null);
+    }
   };
 
   const handleProcessPending = async () => {
@@ -1088,6 +1108,14 @@ export default function JobsPage() {
                   >
                     <FileText className="w-3.5 h-3.5 mr-1.5" />
                     Cover Letter Studio
+                  </button>
+                  <button
+                    onClick={() => handlePrepareApplication(selectedJob.id)}
+                    disabled={preparingAppId === selectedJob.id}
+                    className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors disabled:opacity-50"
+                  >
+                    <Send className={`w-3.5 h-3.5 mr-1.5 ${preparingAppId === selectedJob.id ? 'animate-spin' : ''}`} />
+                    {preparingAppId === selectedJob.id ? 'Preparing Packet...' : 'Prepare Application'}
                   </button>
                   {selectedJob.application_url && (
                     <a
