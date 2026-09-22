@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { api } from '@/lib/api';
 import { Application, ApplicationDetail, ApplicationQuestion } from '@/types';
@@ -24,6 +25,7 @@ import {
   Eye,
   Check,
   Edit3,
+  Calendar,
 } from 'lucide-react';
 
 export default function ApplicationsPage() {
@@ -52,6 +54,18 @@ export default function ApplicationsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // Interview & Offer Modals
+  const [showInterviewModal, setShowInterviewModal] = useState(false);
+  const [interviewRound, setInterviewRound] = useState('Technical Round 1');
+  const [interviewDate, setInterviewDate] = useState('');
+  const [interviewerName, setInterviewerName] = useState('');
+  const [meetingLink, setMeetingLink] = useState('');
+
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [offerSalary, setOfferSalary] = useState('');
+  const [offerBonus, setOfferBonus] = useState('');
+  const [offerDeadline, setOfferDeadline] = useState('');
 
   const fetchApplications = async () => {
     setLoading(true);
@@ -126,6 +140,57 @@ export default function ApplicationsPage() {
       }
     } catch (err: any) {
       setAlertMessage({ type: 'error', text: err.message || 'Failed to reject application' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleScheduleInterview = async () => {
+    if (!selectedAppId) return;
+    setActionLoading(true);
+    try {
+      await api.updateApplicationStatus(selectedAppId, {
+        status: 'INTERVIEW',
+        reason: `Scheduled ${interviewRound}`,
+        interview_details: {
+          round: interviewRound,
+          scheduled_at: interviewDate,
+          interviewer: interviewerName,
+          meeting_link: meetingLink,
+        },
+      });
+      setShowInterviewModal(false);
+      setAlertMessage({ type: 'success', text: `Application #${selectedAppId} moved to INTERVIEW!` });
+      await fetchApplications();
+      const updated = await api.getApplication(selectedAppId);
+      setAppDetail(updated);
+    } catch (err: any) {
+      setAlertMessage({ type: 'error', text: err.message || 'Failed to schedule interview' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleLogOffer = async () => {
+    if (!selectedAppId) return;
+    setActionLoading(true);
+    try {
+      await api.updateApplicationStatus(selectedAppId, {
+        status: 'OFFER',
+        reason: 'Offer Letter Received',
+        offer_details: {
+          base_salary: offerSalary,
+          joining_bonus: offerBonus,
+          deadline: offerDeadline,
+        },
+      });
+      setShowOfferModal(false);
+      setAlertMessage({ type: 'success', text: `Congratulations! Offer logged for Application #${selectedAppId}.` });
+      await fetchApplications();
+      const updated = await api.getApplication(selectedAppId);
+      setAppDetail(updated);
+    } catch (err: any) {
+      setAlertMessage({ type: 'error', text: err.message || 'Failed to log offer' });
     } finally {
       setActionLoading(false);
     }
@@ -758,7 +823,7 @@ export default function ApplicationsPage() {
 
               {/* Drawer Footer Actions */}
               <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center gap-3">
-                <div>
+                <div className="flex items-center gap-2">
                   {appDetail.status === 'AWAITING_APPROVAL' && (
                     <button
                       onClick={() => handleRejectApplication(appDetail.id)}
@@ -767,6 +832,30 @@ export default function ApplicationsPage() {
                     >
                       Reject Application
                     </button>
+                  )}
+                  {['APPLIED', 'INTERVIEW'].includes(appDetail.status) && (
+                    <>
+                      <Link
+                        href="/monitoring"
+                        className="px-3 py-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors inline-flex items-center"
+                      >
+                        <Clock className="w-3.5 h-3.5 mr-1" /> Follow-Up Radar
+                      </Link>
+                      <button
+                        onClick={() => setShowInterviewModal(true)}
+                        className="px-3 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors inline-flex items-center"
+                      >
+                        <Calendar className="w-3.5 h-3.5 mr-1" /> Schedule Interview
+                      </button>
+                      {appDetail.status === 'INTERVIEW' && (
+                        <button
+                          onClick={() => setShowOfferModal(true)}
+                          className="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors inline-flex items-center"
+                        >
+                          <Check className="w-3.5 h-3.5 mr-1" /> Log Offer
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -835,6 +924,160 @@ export default function ApplicationsPage() {
                 >
                   <Check className={`w-3.5 h-3.5 mr-1.5 ${actionLoading ? 'animate-spin' : ''}`} />
                   {actionLoading ? 'Submitting...' : 'Confirm & Submit'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Schedule Interview Modal */}
+        {showInterviewModal && selectedAppId && (
+          <div className="fixed inset-0 bg-black/60 z-60 flex items-center justify-center p-4 backdrop-blur-2xs">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
+                    <Calendar className="w-6 h-6" />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">Schedule Interview Round</h3>
+                    <p className="text-xs text-slate-500">Application #{selectedAppId}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowInterviewModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Round Name</label>
+                  <input
+                    type="text"
+                    value={interviewRound}
+                    onChange={(e) => setInterviewRound(e.target.value)}
+                    placeholder="e.g. Technical Round 1 or System Design"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Date & Time</label>
+                  <input
+                    type="text"
+                    value={interviewDate}
+                    onChange={(e) => setInterviewDate(e.target.value)}
+                    placeholder="e.g. 2026-09-25 15:00 UTC or Tomorrow 3 PM"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Interviewer Name / Role</label>
+                  <input
+                    type="text"
+                    value={interviewerName}
+                    onChange={(e) => setInterviewerName(e.target.value)}
+                    placeholder="e.g. Engineering Lead / Priya Sharma"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Meeting Link</label>
+                  <input
+                    type="text"
+                    value={meetingLink}
+                    onChange={(e) => setMeetingLink(e.target.value)}
+                    placeholder="e.g. https://meet.google.com/xyz or Zoom URL"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  onClick={() => setShowInterviewModal(false)}
+                  className="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleScheduleInterview}
+                  disabled={actionLoading}
+                  className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <Calendar className="w-3.5 h-3.5 mr-1.5" />
+                  {actionLoading ? 'Saving...' : 'Record Interview'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Log Offer Modal */}
+        {showOfferModal && selectedAppId && (
+          <div className="fixed inset-0 bg-black/60 z-60 flex items-center justify-center p-4 backdrop-blur-2xs">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">Log Job Offer</h3>
+                    <p className="text-xs text-slate-500">Application #{selectedAppId}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowOfferModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Total CTC / Base Salary</label>
+                  <input
+                    type="text"
+                    value={offerSalary}
+                    onChange={(e) => setOfferSalary(e.target.value)}
+                    placeholder="e.g. 25,00,000 INR"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Joining Bonus / Perks (Optional)</label>
+                  <input
+                    type="text"
+                    value={offerBonus}
+                    onChange={(e) => setOfferBonus(e.target.value)}
+                    placeholder="e.g. 2,00,000 INR sign-on"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Offer Acceptance Deadline</label>
+                  <input
+                    type="text"
+                    value={offerDeadline}
+                    onChange={(e) => setOfferDeadline(e.target.value)}
+                    placeholder="e.g. 2026-10-01"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  onClick={() => setShowOfferModal(false)}
+                  className="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleLogOffer}
+                  disabled={actionLoading}
+                  className="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <Check className="w-3.5 h-3.5 mr-1.5" />
+                  {actionLoading ? 'Saving...' : 'Record Offer'}
                 </button>
               </div>
             </div>

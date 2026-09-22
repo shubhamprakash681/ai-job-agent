@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, FileText, FileCheck, User, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, Briefcase, FileText, Activity, FileCheck, User, BarChart3, Settings } from 'lucide-react';
 import clsx from 'clsx';
 
 const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Jobs', href: '/jobs', icon: Briefcase },
   { name: 'Applications', href: '/applications', icon: FileText },
+  { name: 'Monitoring', href: '/monitoring', icon: Activity },
   { name: 'Resumes', href: '/resumes', icon: FileCheck },
   { name: 'Candidate', href: '/candidate', icon: User },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },

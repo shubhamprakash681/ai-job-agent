@@ -29,6 +29,8 @@ from app.services.application.question_engine import get_question_engine
 from app.services.application.submission_engine import get_submission_engine
 from app.services.resume.tailor import get_resume_tailor
 from app.services.cover_letter.generator import get_cover_letter_generator
+from app.schemas.monitoring import ApplicationStatusUpdateRequest
+from app.services.monitoring.status_manager import StatusManager
 
 router = APIRouter()
 
@@ -380,3 +382,38 @@ async def update_question_endpoint(
     await db.refresh(q)
 
     return ApplicationQuestionResponse.model_validate(q)
+
+
+@router.post("/{app_id}/status", response_model=MessageResponse)
+async def update_application_status_endpoint(
+    app_id: int,
+    req: ApplicationStatusUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """
+    Manually transition an application's lifecycle status (e.g. INTERVIEW, OFFER, REJECTED, WITHDRAWN)
+    and record structured interview or offer details.
+    """
+    app = await db.get(Application, app_id)
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    status_manager = StatusManager(db)
+    try:
+        await status_manager.update_status(
+            application=app,
+            user_id=current_user.id,
+            target_status=req.status,
+            reason=req.reason,
+            notes=req.notes,
+            interview_details=req.interview_details,
+            offer_details=req.offer_details,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return MessageResponse(
+        message=f"Application #{app_id} successfully updated to {req.status}."
+    )
+

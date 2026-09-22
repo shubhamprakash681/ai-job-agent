@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: ai_job_agent_postgres_container
     environment:
       POSTGRES_USER: jobagent
       POSTGRES_PASSWORD: jobagent_dev
@@ -14,9 +15,26 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ai_job_agent_pgadmin_container
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
 
   redis:
     image: redis:7-alpine
+    container_name: ai_job_agent_redis_container
     ports:
       - '6379:6379'
     volumes:
@@ -26,11 +44,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: ai_job_agent_backend_container
     ports:
       - '8000:8000'
     environment:
@@ -44,7 +64,7 @@ services:
       - GEMINI_ENABLED=${GEMINI_ENABLED:-false}
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - GROQ_ENABLED=${GROQ_ENABLED:-false}
-      - CORS_ORIGINS=["http://localhost:3000"]
+      - CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./candidate:/app/candidate:ro
@@ -61,17 +81,26 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: ai_job_agent_frontend_container
     ports:
       - '3000:3000'
     environment:
       - HOSTNAME=0.0.0.0
       - PORT=3000
       - BACKEND_API_URL=http://backend:8000
-      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
       - backend
     restart: unless-stopped
 
 volumes:
   postgres_data:
+    name: ai_job_agent_postgres_volume
   redis_data:
+    name: ai_job_agent_redis_volume
+  pgadmin_data:
+    name: ai_job_agent_pgadmin_volume
+
+networks:
+  default:
+    name: ai_job_agent_network

@@ -293,3 +293,102 @@ export interface CoverLetterResponse {
   generator_source: string;
 }
 
+export interface FollowupItem {
+  application_id: number;
+  job_id: number;
+  job_title: string;
+  company: string;
+  applied_at: string | null;
+  days_since_applied: number;
+  status: string;
+  followup_type: '7_DAY' | '14_DAY' | '30_DAY_STALE' | 'RECENT';
+  suggested_action: string;
+}
+
+export interface FollowupListResponse {
+  items: FollowupItem[];
+  total_needing_followup: number;
+  seven_day_count: number;
+  fourteen_day_count: number;
+  stale_count: number;
+}
+
+export interface FollowupDraftRequest {
+  tone?: 'professional' | 'courteous' | 'concise';
+  recipient_name?: string | null;
+  recipient_email?: string | null;
+  custom_instructions?: string | null;
+}
+
+export interface FollowupDraftResponse {
+  application_id: number;
+  company: string;
+  job_title: string;
+  recipient_name?: string | null;
+  recipient_email?: string | null;
+  subject: string;
+  body: string;
+  days_since_applied: number;
+  tone: string;
+  created_at: string;
+}
+
+export interface EmailParseRequest {
+  raw_email_text: string;
+  sender?: string;
+  subject?: string;
+}
+
+export interface EmailParseResponse {
+  classification: 'INTERVIEW_INVITATION' | 'ASSESSMENT_REQUEST' | 'REJECTION' | 'APPLICATION_RECEIVED' | 'OFFER' | 'GENERAL_INQUIRY' | 'UNKNOWN';
+  confidence: number;
+  company_extracted?: string | null;
+  role_extracted?: string | null;
+  key_details: {
+    meeting_links?: string[];
+    assessment_platform?: string;
+    deadline?: string;
+    sender?: string;
+    subject?: string;
+    [key: string]: any;
+  };
+  suggested_application_id?: number | null;
+  suggested_status?: string | null;
+  match_rationale?: string | null;
+}
+
+export interface EmailApplyMatchRequest {
+  application_id: number;
+  classification: string;
+  new_status?: string | null;
+  notes?: string | null;
+  event_metadata?: Record<string, any> | null;
+}
+
+export interface ApplicationStatusUpdateRequest {
+  status: string;
+  reason?: string | null;
+  notes?: string | null;
+  interview_details?: Record<string, any> | null;
+  offer_details?: Record<string, any> | null;
+}
+
+export interface InAppNotification {
+  id: number;
+  user_id: number;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  action_url?: string | null;
+  data?: string | null;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  items: InAppNotification[];
+  unread_count: number;
+  total: number;
+}
+
+

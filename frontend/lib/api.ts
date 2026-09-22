@@ -20,6 +20,15 @@ import {
   ClaimValidationResponse,
   ResumeValidationResponse,
   CoverLetterResponse,
+  FollowupListResponse,
+  FollowupDraftRequest,
+  FollowupDraftResponse,
+  EmailParseRequest,
+  EmailParseResponse,
+  EmailApplyMatchRequest,
+  ApplicationStatusUpdateRequest,
+  NotificationListResponse,
+  InAppNotification,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -192,6 +201,45 @@ class ApiClient {
     return this.request<CoverLetterResponse>(`/jobs/${jobId}/cover-letter`, {
       method: 'PUT',
       body: JSON.stringify({ content_markdown: contentMarkdown }),
+    });
+  }
+
+  // Monitoring & Follow-ups
+  getFollowups() {
+    return this.request<FollowupListResponse>('/monitoring/followups');
+  }
+  draftFollowup(applicationId: number, data: FollowupDraftRequest) {
+    return this.request<FollowupDraftResponse>(`/monitoring/followups/${applicationId}/draft`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+  parseEmail(data: EmailParseRequest) {
+    return this.request<EmailParseResponse>('/monitoring/email/parse', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+  applyEmailMatch(data: EmailApplyMatchRequest) {
+    return this.request<{ success: boolean; application_id: number; status: string; message: string }>('/monitoring/email/apply', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+  getNotifications(unreadOnly: boolean = false) {
+    const qs = unreadOnly ? '?unread_only=true' : '';
+    return this.request<NotificationListResponse>(`/monitoring/notifications${qs}`);
+  }
+  markNotificationRead(id: number) {
+    return this.request<{ success: boolean }>(`/monitoring/notifications/${id}/read`, { method: 'POST' });
+  }
+  markAllNotificationsRead() {
+    return this.request<{ updated_count: number }>('/monitoring/notifications/read-all', { method: 'POST' });
+  }
+  updateApplicationStatus(applicationId: number, data: ApplicationStatusUpdateRequest) {
+    return this.request<{ message: string }>(`/applications/${applicationId}/status`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   }
 
