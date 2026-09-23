@@ -35,7 +35,7 @@ class CoverLetterExporter:
         content: str,
         output_path: str,
         candidate_name: str = "Shubham Prakash",
-        contact_info: str = "Mumbai, India | +91 9934305886 | shubhamprakash230@gmail.com | Portfolio: https://www.shubhamprakash681.in/ | LinkedIn: linkedin.com/in/shubham-prakash-dev",
+        contact_info: str = "Mumbai, India | +91 9934305886 | shubhamprakash230@gmail.com | Portfolio: https://www.shubhamprakash681.in/ | LinkedIn: linkedin.com/in/shubhamprakash681",
         company: str = "Hiring Team",
         title: str = "Software Engineer",
         date_str: str | None = None,

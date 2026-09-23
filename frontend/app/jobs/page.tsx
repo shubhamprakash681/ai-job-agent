@@ -1265,7 +1265,7 @@ export default function JobsPage() {
                         Mumbai, India &bull; +91 9934305886 &bull; shubhamprakash230@gmail.com
                       </p>
                       <p className="text-xs text-slate-500">
-                        Portfolio: https://www.shubhamprakash681.in/ &bull; LinkedIn: linkedin.com/in/shubham-prakash-dev
+                        Portfolio: https://www.shubhamprakash681.in/ &bull; LinkedIn: linkedin.com/in/shubhamprakash681
                       </p>
                     </div>
 

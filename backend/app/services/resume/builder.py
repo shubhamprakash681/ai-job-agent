@@ -44,8 +44,8 @@ class MasterResumeData(BaseModel):
     email: str = "shubhamprakash681@gmail.com"
     phone: str = "+91-9955551381"
     portfolio_url: str = "https://www.shubhamprakash681.in/"
-    linkedin_url: str = "https://linkedin.com/in/shubham-prakash-dev"
-    github_url: str = "https://github.com/shubham-prakash"
+    linkedin_url: str = "https://linkedin.com/in/shubhamprakash681"
+    github_url: str = "https://github.com/shubhamprakash681"
     variant_id: str = "java-react-fullstack"
     variant_name: str = "Java + React Full Stack"
     tagline: str = "Full Stack Engineer | Java, Spring Boot & React Ecosystem"
@@ -150,8 +150,8 @@ class MasterResumeBuilder:
             email=prof.email,
             phone=prof.phone,
             portfolio_url=prof.links.portfolio or "https://www.shubhamprakash681.in/",
-            linkedin_url=prof.links.linkedin or "https://linkedin.com/in/shubham-prakash-dev",
-            github_url=prof.links.github or "https://github.com/shubham-prakash",
+            linkedin_url=prof.links.linkedin or "https://linkedin.com/in/shubhamprakash681",
+            github_url=prof.links.github or "https://github.com/shubhamprakash681",
             variant_id=var_cfg.id,
             variant_name=var_cfg.name,
             tagline=var_cfg.tagline,
