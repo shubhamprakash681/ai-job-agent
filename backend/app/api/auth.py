@@ -6,18 +6,27 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import SetupStatus, SetupRequest, TokenResponse, UserLogin, UserResponse
 from app.core.security import hash_password, verify_password, create_access_token
+from app.core.logging import get_logger
 from app.api.deps import get_current_user
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 @router.get("/setup/status", response_model=SetupStatus)
 async def setup_status(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).limit(1))
-    user = result.scalar_one_or_none()
-    
-    if user:
-        return SetupStatus(is_setup=True, message="System is already setup")
-    return SetupStatus(is_setup=False, message="System requires setup")
+    try:
+        result = await db.execute(select(User).limit(1))
+        user = result.scalar_one_or_none()
+        
+        if user:
+            return SetupStatus(is_setup=True, message="System is already setup")
+        return SetupStatus(is_setup=False, message="System requires setup")
+    except Exception as e:
+        logger.error(f"Error querying database for setup status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database unavailable: {str(e)}"
+        )
 
 @router.post("/setup", response_model=TokenResponse)
 async def setup(request: SetupRequest, db: AsyncSession = Depends(get_db)):

@@ -26,8 +26,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         from app.db.init_db import init_db as seed_db
         await seed_db()
+        logger.info("Database initialized and verified successfully.")
     except Exception as e:
-        logger.warning(f"Database initialization check notice: {e}")
+        logger.error(f"Database initialization failed: {e}", exc_info=True)
 
     logger.info("AI Job Agent API started successfully.")
     yield

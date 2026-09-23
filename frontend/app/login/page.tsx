@@ -29,8 +29,8 @@ export default function LoginPage() {
         setIsSetup(res.is_setup);
         setLoading(false);
       })
-      .catch(() => {
-        setError('Failed to connect to the server.');
+      .catch(err => {
+        setError(err.message || 'Failed to connect to the server.');
         setLoading(false);
       });
   }, [isAuthenticated, router]);

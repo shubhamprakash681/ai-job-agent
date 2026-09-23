@@ -223,3 +223,39 @@ docker compose logs -f backend
 ssh -L 5050:localhost:5050 -i ~/.ssh/id_rsa ubuntu@130.210.26.198
 ```
 Then open `http://localhost:5050` in your local browser.
+
+---
+
+## 9. Troubleshooting & Database Connection Fixes
+
+### If Frontend shows "Failed to connect to the server" or `/api/health` reports `"db_status":"error"`:
+
+This occurs when the backend container cannot authenticate or connect to PostgreSQL (e.g. password mismatch or unescaped characters in the database URL).
+
+#### Step 1: Pull latest updates & rebuild backend
+```bash
+cd ~/ai-job-agent
+git pull origin main
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build backend nginx
+```
+
+#### Step 2: Synchronize PostgreSQL password
+If `postgres_data` volume was initialized previously with a different password, Postgres retains the original password. Synchronize it with your `.env` value:
+```bash
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "ALTER USER $POSTGRES_USER WITH PASSWORD '\''$POSTGRES_PASSWORD'\'';"'
+```
+
+#### Step 3: Run Database Schema Initialization & Seeding
+```bash
+docker compose exec backend python -c "import asyncio; from app.db.session import init_db; from app.db.init_db import init_db as seed_db; asyncio.run(init_db()); asyncio.run(seed_db())"
+```
+
+#### Step 4: Restart backend and verify
+```bash
+docker compose restart backend
+curl -k https://agent.jobs.shubhamprakash681.in:4000/api/health
+```
+You should see:
+`{"status":"ok","db_status":"ok",...}`
+
+Now reload `https://agent.jobs.shubhamprakash681.in` or `https://agent.jobs.shubhamprakash681.in:3000` in your browser. The setup/login screen will load immediately!
