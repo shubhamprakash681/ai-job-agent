@@ -4,14 +4,16 @@ services:
     container_name: ai_job_agent_nginx_container
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+      - "${NGINX_FRONTEND_PORT:-3000}:3000"
+      - "${NGINX_BACKEND_PORT:-4000}:4000"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - ./nginx/certbot/www:/var/www/certbot:ro
     depends_on:
       - frontend
+      - backend
     networks:
       - default
-

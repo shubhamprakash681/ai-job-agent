@@ -96,8 +96,9 @@ if command -v firewall-cmd &> /dev/null && systemctl is-active --quiet firewalld
     firewall-cmd --permanent --add-port=80/tcp || true
     firewall-cmd --permanent --add-port=443/tcp || true
     firewall-cmd --permanent --add-port=3000/tcp || true
+    firewall-cmd --permanent --add-port=4000/tcp || true
     firewall-cmd --reload
-    echo "✅ Firewalld ports 80, 443, 3000 opened."
+    echo "✅ Firewalld ports 80, 443, 3000, 4000 opened."
 fi
 
 # Handle ufw (common in Ubuntu)
@@ -107,8 +108,9 @@ if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
     ufw allow 80/tcp
     ufw allow 443/tcp
     ufw allow 3000/tcp
+    ufw allow 4000/tcp
     ufw reload
-    echo "✅ UFW ports 80, 443, 3000 opened."
+    echo "✅ UFW ports 80, 443, 3000, 4000 opened."
 fi
 
 # Handle default Oracle Cloud Ubuntu iptables reject rules
@@ -117,22 +119,41 @@ if iptables -L INPUT -n | grep -q "REJECT"; then
     iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT || true
     iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT || true
     iptables -I INPUT 1 -p tcp --dport 3000 -j ACCEPT || true
+    iptables -I INPUT 1 -p tcp --dport 4000 -j ACCEPT || true
     
     if command -v netfilter-persistent &> /dev/null; then
         netfilter-persistent save || true
     elif [ -d /etc/iptables ]; then
         iptables-save > /etc/iptables/rules.v4 || true
     fi
-    echo "✅ Ingress iptables rules applied."
+    echo "✅ Ingress iptables rules applied for 80, 443, 3000, 4000."
 fi
 
 # ------------------------------------------------------------------------------
-# 5. Create Systemd Service for Auto-Restart on VM Boot
+# 5. Generate Initial SSL Certificates (if not already present)
+# ------------------------------------------------------------------------------
+echo "🔒 Checking SSL certificates..."
+mkdir -p "$PROJECT_DIR/nginx/ssl"
+if [ ! -f "$PROJECT_DIR/nginx/ssl/fullchain.pem" ]; then
+    echo "Generating initial SSL certificates for agent.jobs.shubhamprakash681.in..."
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      -keyout "$PROJECT_DIR/nginx/ssl/privkey.pem" \
+      -out "$PROJECT_DIR/nginx/ssl/fullchain.pem" \
+      -subj "/C=IN/ST=Maharashtra/L=Mumbai/O=AI Job Agent/CN=agent.jobs.shubhamprakash681.in" \
+      -addext "subjectAltName=DNS:agent.jobs.shubhamprakash681.in,DNS:localhost,IP:130.210.26.198,IP:127.0.0.1"
+    chown -R "$REAL_USER":"$REAL_USER" "$PROJECT_DIR/nginx/ssl"
+    echo "✅ SSL certificates generated in ./nginx/ssl/."
+else
+    echo "✅ SSL certificates already exist."
+fi
+
+# ------------------------------------------------------------------------------
+# 6. Create Systemd Service for Auto-Restart on VM Boot
 # ------------------------------------------------------------------------------
 echo "⚙️ Creating systemd service for AI Job Agent..."
 cat <<EOF > /etc/systemd/system/ai-job-agent.service
 [Unit]
-Description=AI Job Agent Production Orchestration
+Description=AI Job Agent Production Orchestration (HTTPS)
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target
@@ -143,8 +164,8 @@ RemainAfterExit=yes
 WorkingDirectory=$PROJECT_DIR
 User=$REAL_USER
 Group=docker
-ExecStart=/usr/bin/docker compose up -d
-ExecStop=/usr/bin/docker compose down
+ExecStart=/usr/bin/docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.yml -f docker-compose.prod.yml down
 TimeoutStartSec=0
 
 [Install]
@@ -170,13 +191,11 @@ echo "3. Click your 'Default Security List for ...'"
 echo "4. Click 'Add Ingress Rules' and allow:"
 echo "   - Source: 0.0.0.0/0 | Protocol: TCP | Destination Port Range: 80"
 echo "   - Source: 0.0.0.0/0 | Protocol: TCP | Destination Port Range: 443"
-echo "   - Source: 0.0.0.0/0 | Protocol: TCP | Destination Port Range: 3000 (if testing directly)"
+echo "   - Source: 0.0.0.0/0 | Protocol: TCP | Destination Port Range: 3000 (HTTPS Frontend)"
+echo "   - Source: 0.0.0.0/0 | Protocol: TCP | Destination Port Range: 4000 (HTTPS Backend API)"
 echo ""
-echo "To start the application:"
+echo "To start the application with full HTTPS:"
 echo "   1. cp .env.example .env (and configure secrets/keys)"
-echo "   2. docker compose up -d --build"
-echo ""
-echo "For Nginx reverse proxy (Port 80/443):"
-echo "   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build"
+echo "   2. docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build"
 echo "=========================================================="
 

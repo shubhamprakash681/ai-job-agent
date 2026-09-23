@@ -1,21 +1,23 @@
 # Oracle Cloud Infrastructure (OCI) Deployment Guide
-## Production Target: `http://agent.jobs.shubhamprakash681.in`
+## Production Target: Full HTTPS (Frontend: 3000, Backend: 4000)
+### `https://agent.jobs.shubhamprakash681.in:3000` & `https://agent.jobs.shubhamprakash681.in:4000`
 
-This guide details how to deploy and configure the **AI Job Agent** on an Oracle Cloud Infrastructure (OCI) **`VM.Standard.A1.Flex`** compute instance (Ampere Altra ARM64) mapped to your domain **`agent.jobs.shubhamprakash681.in`**.
+This guide details how to deploy and configure the **AI Job Agent** strictly over **HTTPS** on an Oracle Cloud Infrastructure (OCI) **`VM.Standard.A1.Flex`** compute instance (Ampere Altra ARM64) mapped to your domain **`agent.jobs.shubhamprakash681.in`**.
 
 ---
 
-## 1. Architecture & Domain Overview
+## 1. Architecture & Port Mapping (HTTPS Only)
 
 - **Compute Instance**: Oracle Cloud `VM.Standard.A1.Flex` (Ampere Altra ARM64 / aarch64)
 - **Public IP Address**: `130.210.26.198`
 - **Domain Name**: `agent.jobs.shubhamprakash681.in`
 - **DNS Provider**: GoDaddy (`domaincontrol.com`)
 - **Port Mapping**:
-  - `80` (HTTP) &rarr; Nginx reverse proxy &rarr; Next.js Frontend (`3000`)
-  - `443` (HTTPS) &rarr; Nginx with SSL (Let's Encrypt)
-  - `8000` (FastAPI Backend) &rarr; Bound internally to `127.0.0.1` (proxied server-side via Next.js `/api/...`)
-  - `5431` (PostgreSQL) & `6379` (Redis) &rarr; Bound securely to `127.0.0.1`
+  - **`3000` (HTTPS)**: Next.js Frontend Console &rarr; `https://agent.jobs.shubhamprakash681.in:3000`
+  - **`4000` (HTTPS)**: FastAPI Backend API &rarr; `https://agent.jobs.shubhamprakash681.in:4000`
+  - **`443` (HTTPS)**: Standard HTTPS (aliases frontend & API) &rarr; `https://agent.jobs.shubhamprakash681.in`
+  - **`80` (HTTP)**: Automatically redirects all plain HTTP traffic to HTTPS (`301 Moved Permanently`)
+  - **`5431` (PostgreSQL) & `6379` (Redis)**: Strictly bound to `127.0.0.1` (never exposed to public internet)
 
 ---
 
@@ -31,27 +33,28 @@ Ensure the DNS record for your subdomain is active:
 | **A** | `agent.jobs` | `130.210.26.198` | 1/2 Hour (or 600s) |
 
 > [!NOTE]
-> Ensure the name is **`agent.jobs`** (singular), which resolves to `agent.jobs.shubhamprakash681.in`.
+> Ensure the record name is **`agent.jobs`** (singular), which resolves to `agent.jobs.shubhamprakash681.in`.
 
 ---
 
 ## 3. Step 2: OCI Virtual Cloud Network (VCN) Ingress Rules
 
-In your Oracle Cloud Console, ensure your VCN Security List allows web traffic:
+In your Oracle Cloud Console, ensure your VCN Security List allows web traffic on ports 80, 443, 3000, and 4000:
 
 1. Go to **Networking** &rarr; **Virtual Cloud Networks** &rarr; Click your VCN.
 2. Under Resources, click **Security Lists** &rarr; Select your **Default Security List for...**.
-3. Under **Ingress Rules**, confirm you have rules for ports 80, 443, and 3000:
+3. Under **Ingress Rules**, click **Add Ingress Rules** and ensure these 4 rules are present:
 
 | Source CIDR | IP Protocol | Destination Port Range | Description |
 | :--- | :--- | :--- | :--- |
-| `0.0.0.0/0` | TCP | `80` | HTTP Web Traffic (Nginx) |
-| `0.0.0.0/0` | TCP | `443` | HTTPS Encrypted Web Traffic |
-| `0.0.0.0/0` | TCP | `3000` | Optional: Direct Frontend Access |
+| `0.0.0.0/0` | TCP | `80` | HTTP Web Traffic (Auto-redirect to HTTPS) |
+| `0.0.0.0/0` | TCP | `443` | Standard HTTPS Encrypted Web Traffic |
+| `0.0.0.0/0` | TCP | `3000` | HTTPS Frontend Application |
+| `0.0.0.0/0` | TCP | `4000` | HTTPS Backend API Service |
 
 > [!CAUTION]
 > **Do NOT expose Port 5431 (PostgreSQL) or Port 6379 (Redis)!**
-> The application binds internal databases to `127.0.0.1`. Keeping them off the public internet prevents unauthorized brute-force attempts.
+> The application binds internal databases to `127.0.0.1`. Keeping them off the public internet prevents unauthorized bot scans and brute-force attacks.
 
 ---
 
@@ -63,26 +66,24 @@ ssh ubuntu@130.210.26.198
 # (or ssh opc@130.210.26.198 for Oracle Linux)
 ```
 
-Clone or pull the latest repository:
+Pull the latest repository updates:
 ```bash
-cd ~
-git clone https://github.com/shubhamprakash681/ai-job-agent.git
-# or if already cloned:
-cd ai-job-agent
+cd ~/ai-job-agent
 git pull origin main
 ```
 
-Run the automated host setup script to configure Docker, ARM64 swap space, and host firewall:
+Run the automated host setup script to configure Docker, ARM64 swap space, and host firewall rules:
 ```bash
 sudo ./scripts/oci_setup.sh
 ```
 
 ### Manual Host Firewall Unblock (Ubuntu on OCI)
-If you previously saw `Connection refused` on Port 80, ensure the host `iptables` allow rules are applied at the top of your INPUT chain:
+To guarantee that the host OS `iptables` permits incoming traffic on ports 80, 443, 3000, and 4000:
 ```bash
 sudo iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
 sudo iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT
 sudo iptables -I INPUT 1 -p tcp --dport 3000 -j ACCEPT
+sudo iptables -I INPUT 1 -p tcp --dport 4000 -j ACCEPT
 sudo netfilter-persistent save 2>/dev/null || sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
 ```
 
@@ -92,11 +93,10 @@ sudo netfilter-persistent save 2>/dev/null || sudo iptables-save | sudo tee /etc
 
 In your project directory (`~/ai-job-agent`):
 ```bash
-cp .env.example .env
 nano .env
 ```
 
-Ensure the following variables are set specifically for **`agent.jobs.shubhamprakash681.in`**:
+Ensure the following configuration is active for **HTTPS with Frontend (3000) and Backend (4000)**:
 
 ```ini
 # Application Mode
@@ -114,18 +114,18 @@ DATABASE_URL=postgresql+asyncpg://jobagent:YourStrongDatabasePassword123!@postgr
 REDIS_URL=redis://redis:6379/0
 
 # Cloud Port & Security Bindings
-FRONTEND_PORT=3000
+BACKEND_PORT_BINDING=127.0.0.1:4000
+FRONTEND_PORT_BINDING=127.0.0.1:3001
 POSTGRES_PORT_BINDING=127.0.0.1:5431
 REDIS_PORT_BINDING=127.0.0.1:6379
-BACKEND_PORT_BINDING=127.0.0.1:8000
 PGADMIN_PORT_BINDING=127.0.0.1:5050
 
-# CORS & Networking (Customized for your domain)
-CORS_ORIGINS=["http://localhost:3000","http://agent.jobs.shubhamprakash681.in","https://agent.jobs.shubhamprakash681.in","http://130.210.26.198"]
-BACKEND_API_URL=http://backend:8000
-NEXT_PUBLIC_API_URL=http://agent.jobs.shubhamprakash681.in
+# CORS & Networking (HTTPS origins)
+CORS_ORIGINS=["http://localhost:3000","https://localhost:3000","https://agent.jobs.shubhamprakash681.in:3000","https://agent.jobs.shubhamprakash681.in","https://agent.jobs.shubhamprakash681.in:4000"]
+BACKEND_API_URL=http://backend:4000
+NEXT_PUBLIC_API_URL=https://agent.jobs.shubhamprakash681.in:4000
 
-# AI Providers (At least one enabled)
+# AI Providers
 GROQ_API_KEY=gsk_...
 GROQ_ENABLED=true
 GEMINI_API_KEY=AIzaSy...
@@ -134,10 +134,11 @@ GEMINI_ENABLED=true
 
 ---
 
-## 6. Step 5: Launch the Application with Nginx on Port 80
+## 6. Step 5: Launch with HTTPS (Ports 3000 & 4000)
 
-To serve the application on standard HTTP **Port 80** with Nginx:
+Pre-generated SSL certificates for `agent.jobs.shubhamprakash681.in` are committed in `./nginx/ssl/` so Nginx launches with full HTTPS immediately without error.
 
+Run:
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
@@ -145,59 +146,56 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ### Verify Listening Ports
 Run:
 ```bash
-sudo ss -tulpn | grep -wE ':(80|3000)'
+sudo ss -tulpn | grep -wE ':(80|443|3000|4000)'
 ```
 Expected output:
 ```
 tcp   LISTEN 0      511          0.0.0.0:80         0.0.0.0:*    users:(("docker-proxy"...))
-tcp   LISTEN 0      4096         0.0.0.0:3000       0.0.0.0:*    users:(("docker-proxy"...))
+tcp   LISTEN 0      511          0.0.0.0:443        0.0.0.0:*    users:(("docker-proxy"...))
+tcp   LISTEN 0      511          0.0.0.0:3000       0.0.0.0:*    users:(("docker-proxy"...))
+tcp   LISTEN 0      511          0.0.0.0:4000       0.0.0.0:*    users:(("docker-proxy"...))
 ```
 
-### Verify Local HTTP Response
-```bash
-curl -I http://localhost/
-```
-*(Should return `HTTP/1.1 200 OK` or `HTTP/1.1 307 Temporary Redirect` to `/dashboard`).*
-
-Now, open your browser and navigate to:
-👉 **`http://agent.jobs.shubhamprakash681.in/`**
+### Accessing the Platform
+- **Frontend Console (HTTPS)**:
+  👉 **`https://agent.jobs.shubhamprakash681.in:3000/`** *(or `https://agent.jobs.shubhamprakash681.in/`)*
+- **Backend API (HTTPS)**:
+  👉 **`https://agent.jobs.shubhamprakash681.in:4000/api/health`**
+- **Plain HTTP requests (`http://...`)**:
+  Automatically redirected to **HTTPS**.
 
 ---
 
-## 7. Step 6: Setting Up Free HTTPS / SSL with Let's Encrypt
+## 7. Step 6: Upgrading to Official Let's Encrypt CA Certificates
 
-To enable secure `https://agent.jobs.shubhamprakash681.in/`:
+The system boots with pre-configured SSL certificates. To upgrade to a browser-trusted CA certificate from Let's Encrypt:
 
 1. Install Certbot on the VM:
    ```bash
    sudo apt-get install -y certbot  # On Ubuntu
-   # or: sudo dnf install -y certbot # On Oracle Linux
    ```
 
-2. Temporarily stop the containers to free Port 80 for the ACME challenge:
+2. Temporarily stop Nginx to free port 80:
    ```bash
-   docker compose down
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml down
    ```
 
-3. Obtain the SSL Certificate:
+3. Obtain the certificate:
    ```bash
    sudo certbot certonly --standalone -d agent.jobs.shubhamprakash681.in
    ```
 
-4. Copy the issued certificate files into the Nginx SSL directory:
+4. Copy the official certs into `./nginx/ssl`:
    ```bash
    sudo cp /etc/letsencrypt/live/agent.jobs.shubhamprakash681.in/fullchain.pem ./nginx/ssl/
    sudo cp /etc/letsencrypt/live/agent.jobs.shubhamprakash681.in/privkey.pem ./nginx/ssl/
    sudo chown -R $USER:$USER ./nginx/ssl/
    ```
 
-5. Restart the containers with Nginx:
+5. Restart the containers:
    ```bash
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
-
-Now access your site securely at:
-👉 **`https://agent.jobs.shubhamprakash681.in/`**
 
 ---
 
@@ -205,25 +203,23 @@ Now access your site securely at:
 
 ### Check Container Status
 ```bash
-docker compose ps
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
 
 ### View Live Logs
 ```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f nginx
 docker compose logs -f frontend
 docker compose logs -f backend
-docker compose logs -f nginx
 ```
 
 ### Database Backup
 ```bash
 ./scripts/backup.sh
 ```
-*(Creates a timestamped snapshot of PostgreSQL data in `./backups/`).*
 
-### Access pgAdmin 4 via Secure SSH Tunnel
-Since pgAdmin is securely restricted to localhost (`127.0.0.1:5050`):
+### Access pgAdmin 4 Safely (SSH Tunnel)
 ```bash
 ssh -L 5050:localhost:5050 -i ~/.ssh/id_rsa ubuntu@130.210.26.198
 ```
-Then open `http://localhost:5050` on your local laptop browser.
+Then open `http://localhost:5050` in your local browser.

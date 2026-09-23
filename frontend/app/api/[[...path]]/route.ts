@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 const BACKEND_URL =
   process.env.BACKEND_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:8000';
+  'http://localhost:4000';
 
 async function handler(request: NextRequest) {
   const targetUrl = `${BACKEND_URL}${request.nextUrl.pathname}${request.nextUrl.search}`;

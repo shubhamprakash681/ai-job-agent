@@ -52,7 +52,10 @@ services:
       dockerfile: Dockerfile
     container_name: ai_job_agent_backend_container
     ports:
-      - '${BACKEND_PORT_BINDING:-127.0.0.1:8000}:8000'
+      - '${BACKEND_PORT_BINDING:-127.0.0.1:4001}:4000'
+    expose:
+      - '4000'
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "4000"]
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-jobagent}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jobagent}}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
@@ -64,7 +67,7 @@ services:
       - GEMINI_ENABLED=${GEMINI_ENABLED:-false}
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - GROQ_ENABLED=${GROQ_ENABLED:-false}
-      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000"]}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","https://localhost:3000","https://agent.jobs.shubhamprakash681.in:3000","https://agent.jobs.shubhamprakash681.in","https://agent.jobs.shubhamprakash681.in:4000"]}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./candidate:/app/candidate:ro
@@ -83,12 +86,14 @@ services:
       dockerfile: Dockerfile
     container_name: ai_job_agent_frontend_container
     ports:
-      - '${FRONTEND_PORT:-3000}:3000'
+      - '${FRONTEND_PORT_BINDING:-127.0.0.1:3001}:3000'
+    expose:
+      - '3000'
     environment:
       - HOSTNAME=0.0.0.0
       - PORT=3000
-      - BACKEND_API_URL=${BACKEND_API_URL:-http://backend:8000}
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      - BACKEND_API_URL=${BACKEND_API_URL:-http://backend:4000}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://agent.jobs.shubhamprakash681.in:4000}
     depends_on:
       - backend
     restart: unless-stopped
